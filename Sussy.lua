@@ -204,7 +204,7 @@ do
 								Control.CastSpell(HK_Q, target.pos)
 							end
 						end
-					elseif Spells:IsReady(_Q) and myHero.pos:DistanceTo(target.pos) <= 1500 then
+					elseif Spells:IsReady(_Q) and myHero.pos:DistanceTo(target.pos) <= 850 then
 						Control.KeyDown(HK_Q)
 						return
 					end
