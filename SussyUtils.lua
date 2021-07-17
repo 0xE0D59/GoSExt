@@ -1,12 +1,13 @@
 --[[
 	Sussy Utils: utility script for Gaming On Steroids
 	
-	version 1.0
+	version 1.1
 	
 	Changelog:
-	-- 1.0:	Initial release
+	-- 1.1: Added potion handling
+	-- 1.0:	Initial release (Zhonya timers)
 ]]--
-local Version = "1.0"
+local Version = "1.1"
 
 File = {}
 do
@@ -41,8 +42,17 @@ end
 
 do
 	Menu = {}
-	Menu.utils = MenuElement({name = "Sussy Utils", id = 'Sussy ' .. myHero.charName, type = _G.MENU, leftIcon = "/SussyUtils.png"})
-	Menu.zhonya = Menu.utils:MenuElement({name = 'Zhonya timers', id = 'zhonya', type = _G.MENU})
+	Menu = MenuElement({name = "Sussy Utils", id = 'Sussy ' .. myHero.charName, type = _G.MENU, leftIcon = "/SussyUtils.png"})
+		
+	Menu.potter = Menu:MenuElement({name = 'Potions', id = 'potter', type = _G.MENU})
+	Menu.potter_enabled = Menu.potter:MenuElement({id = "enabled", name = "Enabled", value = true})
+    Menu.potter_regular = Menu.potter:MenuElement({id = "regular", name = "Health Potions", value = true, leftIcon = "https://ddragon.leagueoflegends.com/cdn/10.23.1/img/item/2003.png"})
+    Menu.potter_cookies = Menu.potter:MenuElement({id = "cookies", name = "Biscuit", value = true, leftIcon = "https://ddragon.leagueoflegends.com/cdn/10.23.1/img/item/2010.png"})
+    Menu.potter_refill = Menu.potter:MenuElement({id = "refill", name = "Refillable Potion", value = true, leftIcon = "https://ddragon.leagueoflegends.com/cdn/10.23.1/img/item/2031.png"})
+    Menu.potter_corrupt = Menu.potter:MenuElement({id = "corrupt", name = "Corrupting Potion", value = true, leftIcon = "https://ddragon.leagueoflegends.com/cdn/10.23.1/img/item/2033.png"})
+    Menu.potter_health = Menu.potter:MenuElement({id = "healthPercent", name = "Use if HP% below:", value = 50, min = 1, max = 100, identifier = "%"})
+	
+	Menu.zhonya = Menu:MenuElement({name = 'Zhonya timers', id = 'zhonya', type = _G.MENU})
 	Menu.zhonya_enabled = Menu.zhonya:MenuElement({id = 'enabled', name = 'Enabled', value = true})
 	Menu.zhonya_allies = Menu.zhonya:MenuElement({id = 'allies', name = 'Show Allies', value = true, leftIcon = "http://puu.sh/rGoYo/0e0e445743.png"})
 	Menu.zhonya_enemies = Menu.zhonya:MenuElement({id = 'enemies', name = 'Show Enemies', value = true, leftIcon = "http://puu.sh/rGoYt/5c99e94d8a.png"})
@@ -51,49 +61,123 @@ do
 	Menu.col_inner = Menu.zhonya:MenuElement({id = 'col', name = 'Inner Color', color = Draw.Color(250, 250, 210, 85)})
 	Menu.zhonya_size_outer = Menu.zhonya:MenuElement({id = 'sizeOuter', name = 'Outer Radius', value = 400, min = 5, max = 600, step = 5})
 	Menu.col_outer = Menu.zhonya:MenuElement({id = 'col', name = 'Outer Color', color = Draw.Color(250, 250, 210, 85)})
-	Menu.utils:MenuElement({name = '', type = _G.SPACE, id = 'VersionSpacer'})
-	Menu.utils:MenuElement({name = 'Version  ' .. Version, type = _G.SPACE, id = 'VersionNumber'})
 	
-	local ActiveZhonyas = {}
-	local ZhonyaBuffName = "zhonyasringshield"
-	Callback.Add('Tick', function()
-		if not Menu.zhonya_enabled:Value() then return end
-		for i = 1, Game.HeroCount() do 
-			local hero = Game.Hero(i)
-			local zhonyaBuff = nil
+	Menu:MenuElement({name = '', type = _G.SPACE, id = 'VersionSpacer'})
+	Menu:MenuElement({name = 'Version  ' .. Version, type = _G.SPACE, id = 'VersionNumber'})
+	
+	ZhonyaTimers = {}
+	do
+		ZhonyaTimers.ActiveZhonyas = {}
+		ZhonyaTimers.Tick = function()
+			if not Menu.zhonya_enabled:Value() or myHero.dead or Game.IsChatOpen() then return end
+			for i = 1, Game.HeroCount() do 
+				local hero = Game.Hero(i)
+				local zhonyaBuff = nil
+				for i = 0, myHero.buffCount do
+					local buff = myHero:GetBuff(i)
+					if buff.type == 18 and buff.duration > 0 then
+						zhonyaBuff = buff
+					end
+				end
+				if zhonyaBuff then
+					local previous = ZhonyaTimers.ActiveZhonyas[hero.name]
+					local duration = zhonyaBuff.duration
+					if previous then
+						duration = math.max(previous.Duration, duration)
+					end				
+					ZhonyaTimers.ActiveZhonyas[hero.name] = {Duration = duration, Remaining = zhonyaBuff.duration}
+				else
+					ZhonyaTimers.ActiveZhonyas[hero.name] = nil
+				end
+			end		
+		end
+		ZhonyaTimers.Draw = function()
+			Draw.Circle(myHero, 800, 5, Menu.col_inner:Value())
+			if not Menu.zhonya_enabled:Value() or myHero.dead or Game.IsChatOpen() then return end
+			for i = 1, Game.HeroCount() do 
+				local hero = Game.Hero(i)
+				if (hero.team == myHero.team and Menu.zhonya_allies:Value() and hero ~= myHero) or (hero.team ~= myHero.team and Menu.zhonya_enemies:Value()) or (hero == myHero and Menu.zhonya_player:Value()) then
+					local zhonya = ZhonyaTimers.ActiveZhonyas[myHero.name]
+					if zhonya then
+						local t = zhonya.Remaining / zhonya.Duration
+						local outerSize = Menu.zhonya_size_inner:Value() * (1 - t) + Menu.zhonya_size_outer:Value() * t
+						Draw.Circle(hero, Menu.zhonya_size_inner:Value(), 5, Menu.col_inner:Value())
+						Draw.Circle(hero, outerSize, 5, Menu.col_outer:Value())
+					end
+				end
+			end
+		end
+	end
+	
+	Potter = {}
+	do
+		Potter.NextTick = 0
+		Potter.ItemHotKey = {[ITEM_1] = HK_ITEM_1, [ITEM_2] = HK_ITEM_2,[ITEM_3] = HK_ITEM_3, [ITEM_4] = HK_ITEM_4, [ITEM_5] = HK_ITEM_5, [ITEM_6] = HK_ITEM_6,}
+		
+		Potter.Tick = function()
+			if not Menu.potter_enabled:Value() or Potter.NextTick > Game.Timer() or myHero.dead or Game.IsChatOpen() then return end
+			if Potter:IsPlayerAtFountain() then
+				NextTick = Game.Timer() + 0.25
+				return
+			end
+			if not Potter:ShouldPlayerDrinkPotion() then
+				NextTick = Game.Timer() + 0.25
+				return
+			end
+			local healingBuff = Potter:GetHealingBuff()
+			if healingBuff then
+				NextTick = Game.Timer() + math.max(1, healingBuff.duration + 0.5)
+				return
+			end
+			local potionSlot = Potter:GetDrinkablePotionSlot()
+			if potionSlot then
+				Control.CastSpell(Potter.ItemHotKey[potionSlot])
+				NextTick = Game.Timer() + 1
+				return
+			end
+			NextTick = Game.Timer() + 0.25
+		end
+		
+		function Potter:IsPlayerAtFountain()
+			local blueFountain = Vector(500, 180, 500)
+			local redFountain = Vector(14250, 170, 14250)
+			local distance = 800
+			local pos = myHero.pos
+			return pos:DistanceTo(blueFountain) <= distance or pos:DistanceTo(redFountain) <= 800
+		end
+		
+		function Potter:ShouldPlayerDrinkPotion()
+			return not myHero.dead and myHero.maxHealth ~= 0 and (myHero.health / myHero.maxHealth) < Menu.potter_health:Value() / 100
+		end
+		
+		function Potter:GetHealingBuff()
+			if myHero.dead then return false end
 			for i = 0, myHero.buffCount do
 				local buff = myHero:GetBuff(i)
-				if buff.type == 18 and buff.duration > 0 then
-					zhonyaBuff = buff
+				if buff.type == 14 and buff.duration > 0 and (buff.name == "Item2003" or buff.name == "ItemCrystalFlask" or buff.name == "ItemDarkCrystalFlask" or buff.name == "Item2010") then
+					return buff
 				end
 			end
-			if zhonyaBuff then
-				local previous = ActiveZhonyas[hero.name]
-				local duration = zhonyaBuff.duration
-				if previous then
-					duration = math.max(previous.Duration, duration)
-				end				
-				ActiveZhonyas[hero.name] = {Duration = duration, Remaining = zhonyaBuff.duration}
-			else
-				ActiveZhonyas[hero.name] = nil
+			return nil
+		end
+		
+		function Potter:GetDrinkablePotionSlot()
+			for _, j in pairs({ITEM_1, ITEM_2, ITEM_3, ITEM_4, ITEM_5, ITEM_6}) do
+				-- Regular Pot
+				if Menu.potter_regular:Value() and myHero:GetItemData(j).itemID == 2003 and myHero:GetSpellData(j).currentCd == 0 then return j end
+				-- Refillable Pot
+				if Menu.potter_refill:Value() and myHero:GetItemData(j).itemID == 2031 and myHero:GetSpellData(j).currentCd == 0 and myHero:GetItemData(j).ammo > 0 then return j end
+				-- Corrupting Pot
+				if Menu.potter_corrupt:Value() and myHero:GetItemData(j).itemID == 2033 and myHero:GetSpellData(j).currentCd == 0 and myHero:GetItemData(j).ammo > 0 then return j end
+				-- Biscuit
+				if Menu.potter_cookies:Value() and myHero:GetItemData(j).itemID == 2010 and myHero:GetSpellData(j).currentCd == 0 then return j end
 			end
 		end
-	end)
-	Callback.Add('Draw', function()
-		if not Menu.zhonya_enabled:Value() then return end
-		for i = 1, Game.HeroCount() do 
-			local hero = Game.Hero(i)
-			if (hero.team == myHero.team and Menu.zhonya_allies:Value() and hero ~= myHero) or (hero.team ~= myHero.team and Menu.zhonya_enemies:Value()) or (hero == myHero and Menu.zhonya_player:Value()) then
-				local zhonya = ActiveZhonyas[myHero.name]
-				if zhonya then
-					local t = zhonya.Remaining / zhonya.Duration
-					local outerSize = Menu.zhonya_size_inner:Value() * (1 - t) + Menu.zhonya_size_outer:Value() * t
-					Draw.Circle(hero, Menu.zhonya_size_inner:Value(), 5, Menu.col_inner:Value())
-					Draw.Circle(hero, outerSize, 5, Menu.col_outer:Value())
-				end
-			end
-		end
-	end)
+	end
+	
+	Callback.Add('Tick', ZhonyaTimers.Tick)
+	Callback.Add('Draw', ZhonyaTimers.Draw)
+	Callback.Add('Tick', Potter.Tick)
 	
 	print("SussyUtils loaded.")
 end
