@@ -92,7 +92,6 @@ do
 			end		
 		end
 		ZhonyaTimers.Draw = function()
-			Draw.Circle(myHero, 800, 5, Menu.col_inner:Value())
 			if not Menu.zhonya_enabled:Value() or myHero.dead or Game.IsChatOpen() then return end
 			for i = 1, Game.HeroCount() do 
 				local hero = Game.Hero(i)
