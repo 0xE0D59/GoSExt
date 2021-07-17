@@ -159,7 +159,7 @@ do
 					if Menu.r_ks:Value() then
 						for i = 1, Game.HeroCount() do 
 							local hero = Game.Hero(i)
-							if hero and hero.team ~= TEAM_ALLY and hero.valid and hero.alive and myHero.pos:DistanceTo(hero.pos) >= Menu.r_dist:Value() then						
+							if hero and hero.team ~= myHero.team and hero.valid and hero.alive and myHero.pos:DistanceTo(hero.pos) >= Menu.r_dist:Value() then						
 								local rdamage = getdmg("R", hero, myHero)
 								local hp = hero.health + (2 * hero.hpRegen)
 								if hp <= rdamage then
