@@ -1,12 +1,13 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.0
+	version 1.1
 	
 	Changelog:
+	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]]--
-local Version = "1.0"
+local Version = "1.1"
 Callback.Add('Load', function()
     if not FileExist(COMMON_PATH .. "GGPrediction.lua") then
 		print('GGPrediction not found! Please download it before using this script.')
@@ -220,8 +221,60 @@ do
 				end
 			end)
 		
-		print('Sussy '..myHero.charName..' loaded.')
+			print('Sussy '..myHero.charName..' loaded.')
 		end
 		-- Vi END
+		
+		-- Shaco START
+		if myHero.charName == 'Shaco' then
+			Menu:Init()
+			Menu.q:Remove()
+			Menu.w:Remove()
+			Menu.r:Remove()
+			Menu.d:Remove()
+								
+			Menu.e_ks_enabled = Menu.e:MenuElement({id = 'ekillsteal', name = 'Killsteal', value = true})
+			Menu.e_ks_backstab = Menu.e:MenuElement({id = 'ekillstealbackstab', name = 'Include Backstab', value = true})
+			Menu.e_ks_collector = Menu.e:MenuElement({id = 'ekillstealcollector', name = 'Include Collector', value = true})
+			
+			Callback.Add('Tick', function()
+				if not Menu.e_ks_enabled:Value() or not Spells:IsReady(_E) or Orb:IsEvading() or Game.IsChatOpen() or myHero.dead then return end
+				
+				local basedmg = 45
+				local lvldmg = 25 * myHero:GetSpellData(_E).level
+				local statdmg = myHero.ap * 0.55 + myHero.bonusDamage * 0.7
+				local edmg = basedmg + lvldmg + statdmg
+				if edmg < 50 then
+					return
+				end
+				local behindDmg = 15 + (35 / 17 * (myHero.levelData.lvl - 1)) + myHero.ap * 0.1
+				for i = 1, Game.HeroCount() do 
+					local hero = Game.Hero(i)
+					if hero and hero.team ~= myHero.team and hero.valid and hero.alive and myHero.pos:DistanceTo(hero.pos) <= 625 then
+						local health = hero.health + (2 * hero.hpRegen)
+						local extraDamage = 0
+						if Menu.e_ks_backstab:Value() and not GG_Object:IsFacing(hero, myHero) then
+							extraDamage = extraDamage + behindDmg
+						end
+						local dmg = GG_Damage:CalculateDamage(myHero, hero, DAMAGE_TYPE_MAGICAL, edmg + extraDamage)
+						local hpPercent = health / hero.maxHealth
+						if hpPercent < 0.3 then	dmg = dmg * 1.5 end
+						if health > 1 then 
+							if health < dmg then
+								Utils:Cast(HK_E, hero)
+								return
+							end
+							if ((health - dmg) / hero.maxHealth) <= 0.05 and Menu.e_ks_collector:Value() and _G.SDK.ItemManager:HasItem(unit, 6676) then
+								Utils:Cast(HK_E, hero)
+							end
+						end
+					end
+				end
+				
+			end)
+		
+			print('Sussy '..myHero.charName..' loaded.')
+		end
+		-- Shaco END
 	end
 end
