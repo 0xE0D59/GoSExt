@@ -1,14 +1,15 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.2
+	version 1.3
 	
 	Changelog:
+	-- 1.3:	Added Tahm Kench
 	-- 1.2:	Added Braum
 	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]]--
-local Version = "1.2"
+local Version = "1.3"
 Callback.Add('Load', function()
     if not FileExist(COMMON_PATH .. "GGPrediction.lua") then
 		print('GGPrediction not found! Please download it before using this script.')
@@ -327,6 +328,66 @@ do
 
 			print('Sussy '..myHero.charName..' loaded.')
 		end
-		-- Braum END
+		-- Braum END		
+		
+		-- Tahm Kench START
+		if myHero.charName == 'TahmKench' then
+			Menu:Init()
+			Menu.w:Remove()
+			Menu.e:Remove()
+
+			Menu.q_combo = Menu.q:MenuElement({id = 'combo', name = 'Combo', value = true})
+			Menu.q_harass = Menu.q:MenuElement({id = 'harass', name = 'Harass', value = true})
+			Menu.q_hitchance = Menu.q:MenuElement({id = 'hitchance', name = 'Hitchance', value = 1, drop = {'normal', 'high', 'immobile'}})
+				
+			Menu.r_combo = Menu.r:MenuElement({id = 'combo', name = 'Combo', value = true})
+				
+			Menu.q_range = Menu.d:MenuElement({id = 'qrange', name = 'Q Range', value = true})
+			Menu.r_range = Menu.d:MenuElement({id = 'rrange', name = 'R Range', value = false})
+			
+			local DEVOUR_BUFF_NAME = 'tahmkenchpdevourable'
+			local Q_RANGE_COLOR = Draw.Color(190, 50, 205, 50)
+			local R_RANGE_COLOR = Draw.Color(190, 0, 0, 205)
+
+			Callback.Add('Tick', function()
+				if Orb:IsEvading() or Game.IsChatOpen() or myHero.dead then return end
+				local mode = Orb:GetMode()
+
+				if Spells:IsReady(_R) and Menu.r_combo:Value() and mode == "Combo" then					
+					for i = 1, Game.HeroCount() do 
+						local hero = Game.Hero(i)
+						if hero and hero.team ~= myHero.team and hero.valid and hero.alive and myHero.pos:DistanceTo(hero.pos) <= 250 then
+							local rbuff = _G.SDK.BuffManager:GetBuff(hero, DEVOUR_BUFF_NAME)
+							if rbuff and rbuff.count >= 1 then
+								Control.CastSpell(HK_R, hero)
+								return
+							end
+						end
+					end
+				end
+
+				local target = Orb:GetTarget(900)
+				local QGGPrediction = GGPrediction:SpellPrediction({Delay = 0.25, Radius = 70, Range = 900, Speed = 2800, Type = GGPrediction.SPELLTYPE_LINE, Collision = true, MaxCollision = 0, CollisionTypes = {GGPrediction.COLLISION_MINION}})
+				if Spells:IsReady(_Q) and target and ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value())) then
+					QGGPrediction:GetPrediction(target, myHero)
+					if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+						Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+						return
+					end
+				end
+			end)
+			
+			Callback.Add('Draw', function()
+				if Menu.q_range:Value() and Spells:IsReady(_Q) then
+					Draw.Circle(myHero.pos, 900, 1, Q_RANGE_COLOR)
+				end
+				if Menu.r_range:Value() and Spells:IsReady(_R) then
+					Draw.Circle(myHero.pos, 275, 1, R_RANGE_COLOR)
+				end
+			end)
+
+			print('Sussy '..myHero.charName..' loaded.')
+		end
+		-- Tahm Kench END
 	end
 end
