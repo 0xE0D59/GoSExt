@@ -1,13 +1,14 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.1
+	version 1.2
 	
 	Changelog:
+	-- 1.2:	Added Braum
 	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]]--
-local Version = "1.1"
+local Version = "1.2"
 Callback.Add('Load', function()
     if not FileExist(COMMON_PATH .. "GGPrediction.lua") then
 		print('GGPrediction not found! Please download it before using this script.')
@@ -276,5 +277,56 @@ do
 			print('Sussy '..myHero.charName..' loaded.')
 		end
 		-- Shaco END
+		
+		-- Braum START
+		if myHero.charName == 'Braum' then
+			Menu:Init()
+			Menu.w:Remove()
+			Menu.e:Remove()
+			Menu.r:Remove()
+			Menu.d:Remove()
+
+			Menu.q_combo = Menu.q:MenuElement({id = 'combo', name = 'Combo', value = true})
+			Menu.q_harass = Menu.q:MenuElement({id = 'harass', name = 'Harass', value = true})
+			Menu.q_killsteal = Menu.q:MenuElement({id = 'killsteal', name = 'Killsteal', value = true})
+			Menu.q_range = Menu.q:MenuElement({id = "qrange", name = "Q Range", value = 950, min = 50, max = 1000, step = 50})
+			Menu.q_hitchance = Menu.q:MenuElement({id = 'hitchance', name = 'Hitchance', value = 1, drop = {'normal', 'high', 'immobile'}})
+
+			Callback.Add('Tick', function()
+				if not Spells:IsReady(_Q) or Orb:IsEvading() or Game.IsChatOpen() or myHero.dead then return end
+
+				local QRange = Menu.q_range:Value()
+				local QGGPrediction = GGPrediction:SpellPrediction({Delay = 0.25, Radius = 70, Range = QRange, Speed = 1700, Type = GGPrediction.SPELLTYPE_LINE, Collision = true, MaxCollision = 0, CollisionTypes = {GGPrediction.COLLISION_MINION}})
+				if Menu.q_killsteal:Value() then					
+					for i = 1, Game.HeroCount() do 
+						local hero = Game.Hero(i)
+						local qdamage = getdmg("Q", hero, myHero)
+						if hero and hero.team ~= myHero.team and hero.valid and hero.alive and hero.health <= qdamage and myHero.pos:DistanceTo(hero.pos) <= QRange then		
+							QGGPrediction:GetPrediction(hero, myHero)
+							if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+								Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+								return
+							end
+						end
+					end
+				end
+
+				local mode = Orb:GetMode()
+				if not((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value())) then
+					return
+				end				
+				local target = Orb:GetTarget(QRange)
+				if target and target.valid and target.alive then
+					QGGPrediction:GetPrediction(target, myHero)
+					if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+						Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+						return
+					end
+				end
+			end)
+
+			print('Sussy '..myHero.charName..' loaded.')
+		end
+		-- Braum END
 	end
 end
