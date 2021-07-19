@@ -255,10 +255,10 @@ do
 					if hero and hero.team ~= myHero.team and hero.valid and hero.alive and myHero.pos:DistanceTo(hero.pos) <= 625 then
 						local health = hero.health + (2 * hero.hpRegen)
 						local extraDamage = 0
-						if Menu.e_ks_backstab:Value() and not GG_Object:IsFacing(hero, myHero) then
+						if Menu.e_ks_backstab:Value() and not _G.SDK.ObjectManager:IsFacing(hero, myHero) then
 							extraDamage = extraDamage + behindDmg
 						end
-						local dmg = GG_Damage:CalculateDamage(myHero, hero, DAMAGE_TYPE_MAGICAL, edmg + extraDamage)
+						local dmg = _G.SDK.Damage:CalculateDamage(myHero, hero, DAMAGE_TYPE_MAGICAL, edmg + extraDamage)
 						local hpPercent = health / hero.maxHealth
 						if hpPercent < 0.3 then	dmg = dmg * 1.5 end
 						if health > 1 then 
