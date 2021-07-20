@@ -264,11 +264,11 @@ do
 						if hpPercent < 0.3 then	dmg = dmg * 1.5 end
 						if health > 1 then 
 							if health < dmg then
-								Utils:Cast(HK_E, hero)
+								Control.CastSpell(HK_E, hero)
 								return
 							end
 							if ((health - dmg) / hero.maxHealth) <= 0.05 and Menu.e_ks_collector:Value() and _G.SDK.ItemManager:HasItem(unit, 6676) then
-								Utils:Cast(HK_E, hero)
+								Control.CastSpell(HK_E, hero)
 							end
 						end
 					end
