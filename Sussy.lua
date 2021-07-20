@@ -479,7 +479,7 @@ do
 				
 				if Spells:IsReady(_E) then
 					if (mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value()) then
-						local target = Orb:GetTarget(350)
+						local target = Orb:GetTarget(300)
 						if target then
 							Control.CastSpell(HK_E)
 							return
@@ -489,7 +489,7 @@ do
 					if mode == "Clear" and (Menu.e_jungle:Value() or Menu.e_waveclear:Value()) then
 						for i = 1, Game.MinionCount() do
 							local minion = Game.Minion(i)
-							if ((Menu.e_jungle:Value() and minion.team == 300) or ((Menu.e_waveclear:Value() and minion.team == 300 - myHero.team))) and minion.valid and minion.alive and minion.pos:DistanceTo(myHero.pos) <= 350 then
+							if ((Menu.e_jungle:Value() and minion.team == 300) or ((Menu.e_waveclear:Value() and minion.team == 300 - myHero.team))) and minion.valid and minion.alive and minion.pos:DistanceTo(myHero.pos) <= 325 then
 								Control.CastSpell(HK_E)
 								return
 							end
