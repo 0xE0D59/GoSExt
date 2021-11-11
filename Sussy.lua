@@ -1,9 +1,10 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.4
+	version 1.5
 	
 	Changelog:
+	-- 1.5:	Added Pyke
 	-- 1.4:	Added Amumu
 	-- 1.3:	Added Tahm Kench
 	-- 1.2:	Added Braum
@@ -390,6 +391,100 @@ do
 			print('Sussy '..myHero.charName..' loaded.')
 		end
 		-- Tahm Kench END
+		
+		-- Pyke START
+		if myHero.charName == 'Pyke' then
+			Menu:Init()
+			Menu.w:Remove()
+			Menu.e:Remove()
+
+			Menu.q_auto = Menu.q:MenuElement({id = 'qauto', name = 'Auto-pull', value = true})
+			Menu.q_hitchance = Menu.q:MenuElement({id = 'qhitchance', name = 'Hitchance', value = 1, drop = {'Normal', 'High', 'Immobile'}})
+				
+			Menu.r_ks = Menu.r:MenuElement({id = 'rks', name = 'Killsteal', value = true})
+			Menu.r_hitchance = Menu.r:MenuElement({id = 'rhitchance', name = 'Hitchance', value = 1, drop = {'Normal', 'High', 'Immobile'}})
+			
+			Menu.q_range = Menu.d:MenuElement({id = 'qrange', name = 'Q Range', value = true})
+			Menu.r_range = Menu.d:MenuElement({id = 'rrange', name = 'R Range', value = false})
+			
+			local QStartTime = -1
+
+			Callback.Add('Tick', function()
+				if Orb:IsEvading() or Game.IsChatOpen() or myHero.dead then return end
+				if not Spells:IsReady(_Q) then QStartTime = -1 end
+				if Spells:IsReady(_R) and Menu.r_ks:Value() then
+					
+					local LvL = myHero.levelData.lvl
+					local Dmg1 = ({250, 250, 250, 250, 250, 250, 290, 330, 370, 400, 430, 450, 470, 490, 510, 530, 540, 550})[LvL]
+					local Dmg2 = 0.8 * myHero.bonusDamage + 1.5 * myHero.armorPen
+					local RDmg = 0
+
+					if Dmg1 ~= nill then
+						RDmg = Dmg1 + Dmg2
+					else
+						RDmg = Dmg2
+					end
+					
+					for i = 1, Game.HeroCount() do 
+						local hero = Game.Hero(i)
+						if hero and hero.team ~= myHero.team and hero.valid and hero.alive and myHero.pos:DistanceTo(hero.pos) <= 900 and hero.health <= RDmg then
+							local RPrediction = GGPrediction:SpellPrediction({Delay = 0.5, Radius = 250, Range = 750, Speed = 1000, Collision = false, Type = GGPrediction.SPELLTYPE_CIRCLE})
+							RPrediction:GetPrediction(hero, myHero)
+							if RPrediction:CanHit(Menu.r_hitchance:Value() + 1) then	
+								Control.CastSpell(HK_R, RPrediction.CastPosition)
+								return
+							end	
+						end
+					end
+				end
+				
+				if Spells:IsReady(_Q) and Menu.q_auto:Value() then	
+					if myHero.activeSpell.valid and myHero.activeSpell.name == "PykeQ" then
+					
+						if QStartTime == -1 then QStartTime = Game.Timer() end
+						local qChargeDuration = Game.Timer() - QStartTime
+						if qChargeDuration > 3 then return end						
+						local range = math.max(math.min(qChargeDuration, 1.25) * 880, 400)
+						local selected = _G.SDK.TargetSelector.Selected
+						
+						if range > 400 then
+							if selected and selected.team ~= myHero.team and selected.valid and selected.alive and selected.visible and myHero.pos:DistanceTo(selected.pos) <= 3000 then
+								local QPrediction = GGPrediction:SpellPrediction({Delay = 0.25, Radius = 55, Range = range, Speed = 1700, Type = GGPrediction.SPELLTYPE_LINE, Collision = true, MaxCollision = 0, CollisionTypes = {GGPrediction.COLLISION_MINION}})
+								QPrediction:GetPrediction(selected, myHero)
+								if QPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+									Control.CastSpell(HK_Q, QPrediction.CastPosition)
+									return
+								end
+							else
+								for i = 1, Game.HeroCount() do
+									local hero = Game.Hero(i)
+									if hero and hero.team ~= myHero.team and hero.valid and hero.alive and hero.visible and myHero.pos:DistanceTo(hero.pos) <= (range+100) then 
+										local QPrediction = GGPrediction:SpellPrediction({Delay = 0.25, Radius = 55, Range = range, Speed = 1700, Type = GGPrediction.SPELLTYPE_LINE, Collision = true, MaxCollision = 0, CollisionTypes = {GGPrediction.COLLISION_MINION}})
+										QPrediction:GetPrediction(hero, myHero)
+										if QPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+											Control.CastSpell(HK_Q, QPrediction.CastPosition)
+											return
+										end	
+									end
+								end
+							end
+						end
+					end
+				end	
+			end)
+			
+			Callback.Add('Draw', function()
+				if Menu.q_range:Value() and Spells:IsReady(_Q) then					
+					Draw.Circle(myHero.pos, 1100, Draw.Color(255, 255, 255, 100))
+				end				
+				if Menu.r_range:Value() and Spells:IsReady(_R) then					
+					Draw.Circle(myHero.pos, 750, Draw.Color(255, 0, 0, 100))
+				end
+			end)
+
+			print('Sussy '..myHero.charName..' loaded.')
+		end
+		-- Pyke END
 		
 		-- Amumu START
 		if myHero.charName == 'Amumu' then
