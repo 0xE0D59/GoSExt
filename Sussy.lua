@@ -1089,7 +1089,7 @@ do
                                     ((hero.networkID == myHero.networkID and Menu.w_self:Value()) or
                                         (hero.networkID ~= myHero.networkID and Menu.w_ally:Value())) and
                                         Champion:HealthPercent(hero) <= Menu.w_hp:Value() and
-                                        Champion:GetNearbyEnemyCount(hero.pos, 800)
+                                        Champion:GetValidEnemiesCount(hero.pos, 800)
                                  then
                                     Control.CastSpell(HK_W, hero)
                                     return
@@ -1272,6 +1272,10 @@ do
             Menu.e_rangedraw = Menu.d:MenuElement({id = "erangedraw", name = "E Range", value = false})
             Menu.r_rangedraw = Menu.d:MenuElement({id = "rrangedraw", name = "R Range", value = false})
 
+            local NextQCast = Game.Timer()
+            local NextECast = Game.Timer()
+            local NextRCast = Game.Timer()
+
             Callback.Add(
                 "Tick",
                 function()
@@ -1306,7 +1310,7 @@ do
                     local validEnemies = Champion:GetValidEnemies(myHero.pos, 1200)
                     local validAllies = Champion:GetValidAllies(myHero.pos, 1200)
 
-                    if Menu.r_auto:Value() and Spells:IsReady(_R) then
+                    if Menu.r_auto:Value() and Spells:IsReady(_R) and NextRCast < Game.Timer() then
                         local rhp = Menu.r_hp:Value()
                         local enemyCount = Menu.r_enemies:Value()
                         for i = 1, #validAllies do
@@ -1317,13 +1321,14 @@ do
                                     Champion:GetValidEnemiesCount(hero.pos, 800) >= enemyCount
                              then
                                 Control.CastSpell(HK_R, hero)
+                                NextRCast = Game.Timer() + 0.25
                                 return
                             end
                         end
                     end
 
                     if
-                        Menu.e_auto:Value() and Spells:IsReady(_E) and
+                        Menu.e_auto:Value() and Spells:IsReady(_E) and NextECast < Game.Timer() and
                             Champion:ManaPercent(myHero) >= Menu.e_mana:Value()
                      then
                         for i = 1, #validEnemies do
@@ -1333,12 +1338,13 @@ do
                                     Menu.e_targets["ZileanE_" .. hero.charName]:Value()
                              then
                                 Control.CastSpell(HK_E, hero)
+                                NextECast = Game.Timer() + 0.25
                                 return
                             end
                         end
                     end
 
-                    if Spells:IsReady(_Q) or CanWQ then
+                    if Spells:IsReady(_Q) or CanWQ and NextQCast < Game.Timer() then
                         if Menu.q_killsteal:Value() then
                             for i = 1, #validEnemies do
                                 local hero = validEnemies[i]
@@ -1350,6 +1356,7 @@ do
                                             Control.CastSpell(HK_W)
                                         end
                                         Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                        NextQCast = Game.Timer() + 0.2
                                         return
                                     end
                                 end
@@ -1364,6 +1371,7 @@ do
                                         Control.CastSpell(HK_W)
                                     end
                                     Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                    NextQCast = Game.Timer() + 0.2
                                     return
                                 end
                             end
@@ -1378,27 +1386,29 @@ do
                                             Control.CastSpell(HK_W)
                                         end
                                         Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                        NextQCast = Game.Timer() + 0.2
                                         return
                                     end
                                 end
                             end
                         end
-                    end
-
-                    local mode = Orb:GetMode()
-                    local target = Orb:GetTarget(1200)
-                    if
-                        target and (Spells:IsReady(_Q) or CanWQ) and
-                            ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value())) and
-                            Champion:IsValidEnemy(target)
-                     then
-                        QGGPrediction:GetPrediction(target, myHero)
-                        if QGGPrediction:CanHit(QHitChance) then
-                            if CanWQ and not Spells:IsReady(_Q) then
-                                Control.CastSpell(HK_W)
+                        local mode = Orb:GetMode()
+                        local target = Orb:GetTarget(1200)
+                        if
+                            target and
+                                ((mode == "Combo" and Menu.q_combo:Value()) or
+                                    (mode == "Harass" and Menu.q_harass:Value())) and
+                                Champion:IsValidEnemy(target)
+                         then
+                            QGGPrediction:GetPrediction(target, myHero)
+                            if QGGPrediction:CanHit(QHitChance) then
+                                if CanWQ and not Spells:IsReady(_Q) then
+                                    Control.CastSpell(HK_W)
+                                end
+                                Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                NextQCast = Game.Timer() + 0.2
+                                return
                             end
-                            Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
-                            return
                         end
                     end
                 end
