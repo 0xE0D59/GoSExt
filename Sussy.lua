@@ -1253,7 +1253,7 @@ do
             DelayAction(
                 function()
                     for i, target in pairs(Champion:GetEnemies()) do
-                        Menu.r_targets:MenuElement(
+                        Menu.e_targets:MenuElement(
                             {id = "ZileanE_" .. target.charName, name = target.charName, value = true}
                         )
                     end
