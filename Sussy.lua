@@ -1,9 +1,10 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.6
+	version 1.7
 	
 	Changelog:
+	-- 1.7:	Added Zilean
 	-- 1.6:	Added Renata
 	-- 1.5:	Added Pyke
 	-- 1.4:	Added Amumu
@@ -13,6 +14,7 @@
 	-- 1.0:	Initial release
 ]]--
 local Version = "1.6"
+local LoadTime = 0
 Callback.Add('Load', function()
     if not FileExist(COMMON_PATH .. "GGPrediction.lua") then
 		print('GGPrediction not found! Please download it before using this script.')
@@ -24,6 +26,7 @@ Callback.Add('Load', function()
 	end
 	require('GGPrediction')
 	require("DamageLib")
+	LoadTime = Game.Timer()
 	Champion:Init();
 end)
 
@@ -159,8 +162,6 @@ end
 
 Champion = {}
 do
-	
-	
 	function Champion:IsValid(unit)
 		if unit and unit.valid and unit.isTargetable and unit.alive and unit.visible and unit.networkID and unit.health > 0 then
 			return true
@@ -193,26 +194,62 @@ do
 		return false
 	end
 	
+	function Champion:HealthPercent(unit)
+		if unit then
+			return 100 * unit.health / unit.maxHealth
+		end
+		return 0
+	end
+	
+	function Champion:ManaPercent(unit)
+		if unit then
+			return 100 * unit.mana / unit.maxMana
+		end
+		return 0
+	end
+	
 	function Champion:MyHeroNotReady()
 		return myHero.dead or Game.IsChatOpen() or Orb:IsEvading() or Champion:IsRecalling(myHero)
 	end
+	
+	function Champion:GetEnemies()
+		local enemies = {}
+		for i = 1, Game.HeroCount() do 
+			local hero = Game.Hero(i)
+			if hero and hero.team ~= myHero.team then
+				table.insert(enemies, hero)
+			end
+		end
+		return enemies
+	end	
 	
 	function Champion:GetValidEnemies(pos, range)
 		local enemies = {}
 		for i = 1, Game.HeroCount() do 
 			local hero = Game.Hero(i)
-			if hero and Champion:IsValidEnemy(hero) then
+			if hero and Champion:IsValidEnemy(hero) and pos:DistanceTo(hero.pos) <= range then
 				table.insert(enemies, hero)
 			end
 		end
 		return enemies
 	end
 	
+	function Champion:GetAllies()
+		local enemies = {}
+		for i = 1, Game.HeroCount() do 
+			local hero = Game.Hero(i)
+			if hero and hero.team == myHero.team then
+				table.insert(enemies, hero)
+			end
+		end
+		return enemies
+	end	
+	
 	function Champion:GetValidAllies(pos, range)
 		local enemies = {}
 		for i = 1, Game.HeroCount() do 
 			local hero = Game.Hero(i)
-			if hero and Champion:IsValidAlly(hero) then
+			if hero and Champion:IsValidAlly(hero) and pos:DistanceTo(hero.pos) <= range then
 				table.insert(enemies, hero)
 			end
 		end
@@ -239,6 +276,17 @@ do
 			end
 		end
 		return count
+	end
+	
+	function Champion:HasZileanBomb(unit)
+		local name = "ZileanQEnemyBomb"
+		for i = 0, unit.buffCount do
+			local buff = unit:GetBuff(i)
+			if buff and buff.count > 0 and buff.name == name then
+				return true
+			end
+		end
+		return false
 	end
 
 	function Champion:Init()
@@ -725,7 +773,6 @@ do
 			Menu.q_range = Menu.q:MenuElement({id = "qrange", name = "Q Range", value = 900, min = 50, max = 900, step = 25})
 			Menu.q_hitchance = Menu.q:MenuElement({id = 'qhitchance', name = 'Hitchance', value = 1, drop = {'normal', 'high', 'immobile'}})
 			Menu.q_interrupt = Menu.q:MenuElement({id = 'qinterrupt', name = 'Interrupt', value = true})
-			Menu.q_autoimmobile = Menu.q:MenuElement({id = 'qimmobile', name = 'Auto on immobile', value = true})
 			
 			Menu.w_self = Menu.w:MenuElement({id = 'wself', name = 'Use on self', value = true})
 			Menu.w_ally = Menu.w:MenuElement({id = 'wally', name = 'Use on allies', value = true})
@@ -756,11 +803,11 @@ do
 				
 				if (Spells:IsReady(_W) and (Menu.w_self:Value() or Menu.w_ally:Value())) then
 					for i = 1, #validAllies do 
-						local hero = validAllies(i)
+						local hero = validAllies[i]
 						if  myHero.pos:DistanceTo(hero.pos) <= WRange + 25 then
-							local hpPercent = 100 * hero.health / hero.maxHealth
-							if ((hero.networkID == myHero.networkID and Menu.w_self:Value()) or (hero.networkID ~= myHero.networkID and Menu.w_ally:Value())) and hpPercent <= Menu.w_hp:Value() and Champion:GetNearbyEnemyCount(hero.pos, 800) then
+							if ((hero.networkID == myHero.networkID and Menu.w_self:Value()) or (hero.networkID ~= myHero.networkID and Menu.w_ally:Value())) and Champion:HealthPercent(hero) <= Menu.w_hp:Value() and Champion:GetNearbyEnemyCount(hero.pos, 800) then
 								Control.CastSpell(HK_W, hero)
+								return
 							end
 						end
 					end
@@ -768,7 +815,7 @@ do
 				
 				if Spells:IsReady(_Q) and Menu.q_interrupt:Value() and Game.Timer() > NextQCast then					
 					for i = 1, #validEnemies do 
-						local hero = validEnemies(i)
+						local hero = validEnemies[i]
 						local spell = hero.activeSpell
 						if hero and spell and spell.valid and myHero.pos:DistanceTo(hero.pos) <= 1000 and Spells.InterruptableSpells[spell.name] and spell.castEndTime - Game.Timer() > 0.33 then
 							QGGPrediction:GetPrediction(hero, myHero)
@@ -783,7 +830,7 @@ do
 				
 				if Spells:IsReady(_E) and Menu.e_killsteal:Value() then					
 					for i = 1, #validEnemies do 
-						local hero = validEnemies(i)
+						local hero = validEnemies[i]
 						-- local edamage = getdmg("E", hero, myHero) -- TODO Return to DamageLib after its updated
 						local edamageraw = 35 + (30 * myHero:GetSpellData(_E).level) + (myHero.ap * 0.55)
 						local edamage = _G.SDK.Damage:CalculateDamage(myHero, hero, DAMAGE_TYPE_MAGICAL, edamageraw)
@@ -804,7 +851,7 @@ do
 				end				
 				if Spells:IsReady(_Q) and Menu.q_killsteal:Value() and Game.Timer() > NextQCast then					
 					for i = 1, #validEnemies do 
-						local hero = validEnemies(i)
+						local hero = validEnemies[i]
 						-- local qdamage = getdmg("E", hero, myHero) -- TODO Return to DamageLib after its updated
 						local qdamageraw = 35 + (45 * myHero:GetSpellData(_Q).level) + (myHero.ap * 0.8)
 						local qdamage = _G.SDK.Damage:CalculateDamage(myHero, hero, DAMAGE_TYPE_MAGICAL, qdamageraw)
@@ -820,24 +867,26 @@ do
 				end
 
 				local mode = Orb:GetMode()	
-				local target = Orb:GetTarget(1200)				
-				if Spells:IsReady(_Q) and ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value())) and Game.Timer() > NextQCast then
-					if target and Champion:IsValidEnemy(target) then
-						QGGPrediction:GetPrediction(target, myHero)
-						if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
-							NextQCast = Game.Timer() + 2
-							Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
-							return
+				local target = Orb:GetTarget(1200)		
+				if target then
+					if Spells:IsReady(_Q) and ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value())) and Game.Timer() > NextQCast then
+						if target and Champion:IsValidEnemy(target) then
+							QGGPrediction:GetPrediction(target, myHero)
+							if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+								NextQCast = Game.Timer() + 2
+								Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+								return
+							end
 						end
-					end
-				end				
-				
-				if target and Spells:IsReady(_E) and ((mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value())) then
-					if target and and Champion:IsValidEnemy(target) then
-						EGGPrediction:GetPrediction(target, myHero)
-						if EGGPrediction:CanHit(Menu.e_hitchance:Value() + 1) then
-							Control.CastSpell(HK_E, EGGPrediction.CastPosition)
-							return
+					end				
+					
+					if target and Spells:IsReady(_E) and ((mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value())) then
+						if target and Champion:IsValidEnemy(target) then
+							EGGPrediction:GetPrediction(target, myHero)
+							if EGGPrediction:CanHit(Menu.e_hitchance:Value() + 1) then
+								Control.CastSpell(HK_E, EGGPrediction.CastPosition)
+								return
+							end
 						end
 					end
 				end
@@ -859,6 +908,161 @@ do
 				end				
 				if Menu.r_rangedraw:Value() and Spells:IsReady(_R) then				
 					Draw.Circle(myHero.pos, RRange, Draw.Color(200, 255, 0, 0))
+				end
+			end)
+
+			print('Sussy '..myHero.charName..' loaded.')
+		end
+		-- Renata END
+		
+		-- Renata START
+		if myHero.charName == 'Zilean' then
+			Menu:Init()
+
+			Menu.q_combo = Menu.q:MenuElement({id = 'qcombo', name = 'Combo', value = true})
+			Menu.q_harass = Menu.q:MenuElement({id = 'qharass', name = 'Harass', value = true})
+			Menu.q_killsteal = Menu.q:MenuElement({id = 'qkillsteal', name = 'Killsteal', value = true})
+			Menu.q_range = Menu.q:MenuElement({id = "qrange", name = "Range", value = 900, min = 25, max = 900, step = 25})
+			Menu.q_hitchance = Menu.q:MenuElement({id = 'qhitchance', name = 'Hitchance', value = 1, drop = {'normal', 'high', 'immobile'}})
+			Menu.q_autoboom = Menu.q:MenuElement({id = 'qautoboom', name = 'Auto if has bomb', value = true})
+			Menu.q_autoimmobile = Menu.q:MenuElement({id = 'qimmobile', name = 'Auto on immobile', value = true})
+			
+			Menu.w_reset = Menu.w:MenuElement({id = 'w_reset', name = 'Use to reset Q', value = true})
+
+			Menu.e_auto = Menu.e:MenuElement({id = 'eauto', name = 'Auto peel', value = true})
+			Menu.e_range = Menu.e:MenuElement({id = "erange", name = "Range", value = 300, min = 50, max = 600, step = 25})
+			Menu.e_mana = Menu.e:MenuElement({id = "emana", name = "Min Mana", value = 30, min = 1, max = 100, step = 1})
+			Menu.e_targets = Menu.e:MenuElement({id = "Targets", name = "Use on: ", type = MENU})
+			DelayAction(function()
+				for i, target in pairs(Champion:GetEnemies()) do
+					Menu.r_targets:MenuElement({id = "ZileanE_"..target.charName, name = target.charName, value = true})		
+				end
+			end,1)
+			
+			Menu.r_auto = Menu.r:MenuElement({id = 'rauto', name = 'Auto R', value = true})
+			Menu.r_hp = Menu.r:MenuElement({id = "rhppercent", name = "HP %", value = 20, min = 1, max = 100, step = 1})
+			Menu.r_enemies = Menu.r:MenuElement({id = "renemies", name = "Enemies around", value = 1, min = 0, max = 5, step = 1})
+			Menu.r_targets = Menu.r:MenuElement({id = "Targets", name = "Use on: ", type = MENU})
+			DelayAction(function()
+				for i, target in pairs(Champion:GetAllies()) do
+					Menu.r_targets:MenuElement({id = "ZileanR_"..target.charName, name = target.charName, value = true})		
+				end
+			end,1)
+			
+			Menu.q_rangedraw = Menu.d:MenuElement({id = 'qrangedraw', name = 'Q Range', value = false})
+			Menu.e_rangedraw = Menu.d:MenuElement({id = 'erangedraw', name = 'E Range', value = false})
+			Menu.r_rangedraw = Menu.d:MenuElement({id = 'rrangedraw', name = 'R Range', value = false})
+			
+			Callback.Add('Tick', function()
+				if Champion:MyHeroNotReady() then return end				
+				local QRange = Menu.q_range:Value()
+				local ERange = Menu.e_range:Value()
+				local RRange = 925
+				local QCost = 55 + myHero:GetSpellData(_W).level * 5
+				local WCost = 35
+				local ECost = 50
+				local WQCost = WCost + QCost
+				local CanWQ = Menu.w_reset:Value() and Spells:IsReady(_W) and myHero.mana >= WQCost
+				local QHitChance = Menu.q_hitchance:Value() + 1
+				local QGGPrediction = GGPrediction:SpellPrediction({Delay = 0.8, Radius = 160, Range = QRange, Speed = math.huge, Type = GGPrediction.SPELLTYPE_LINE, Collision = true, MaxCollision = 0, CollisionTypes = {GGPrediction.COLLISION_YASUOWALL}})
+				local validEnemies = Champion:GetValidEnemies(myHero.pos, 1200)
+				local validAllies = Champion:GetValidAllies(myHero.pos, 1200)
+				
+				if Menu.r_auto:Value() and Spells:IsReady(_R) then
+					local rhp = Menu.r_hp:Value()
+					local enemyCount = Menu.r_enemies:Value()
+					for i = 1, #validAllies do 
+						local hero = validAllies[i]
+						if Champion:HealthPercent(hero) <= rhp and myHero.pos:DistanceTo(hero.pos) <= RRange and Menu.r_targets["ZileanR_"..hero.charName]:Value() and Champion:GetValidEnemiesCount(hero.pos, 800) >= enemyCount then
+							Control.CastSpell(HK_R, hero)
+							return
+						end
+					end
+				end
+				
+				if Menu.e_auto:Value() and Spells:IsReady(_E) and Champion:ManaPercent(myHero) >= Menu.e_mana:Value() then
+					for i = 1, #validEnemies do 
+						local hero = validEnemies[i]
+						if myHero.pos:DistanceTo(hero.pos) <= ERange and Menu.e_targets["ZileanE_"..hero.charName]:Value() then
+							Control.CastSpell(HK_E, hero)
+							return
+						end
+					end
+				end
+				
+				if Spells:IsReady(_Q) or CanWQ then
+					if Menu.q_killsteal:Value() then
+						for i = 1, #validEnemies do 
+							local hero = validEnemies[i]
+							local damage = getdmg("Q", hero, myHero)
+							if damage >= hero.health then
+								QGGPrediction:GetPrediction(hero, myHero)
+								if QGGPrediction:CanHit(QHitChance) then
+									if CanWQ and not Spells:IsReady(_Q) then
+										Control.CastSpell(HK_W)
+									end
+									Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+									return
+								end
+							end
+						end
+					end
+					if Menu.q_autoimmobile:Value() then
+						for i = 1, #validEnemies do 
+							local hero = validEnemies[i]
+							QGGPrediction:GetPrediction(hero, myHero)
+							if QGGPrediction:CanHit(4) then
+								if CanWQ and not Spells:IsReady(_Q) then
+									Control.CastSpell(HK_W)
+								end
+								Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+								return
+							end
+						end
+					end
+					if Menu.q_autoboom:Value() then
+						for i = 1, #validEnemies do 
+							local hero = validEnemies[i]
+							if Champion:HasZileanBomb(hero) then
+								QGGPrediction:GetPrediction(hero, myHero)
+								if QGGPrediction:CanHit(2) then
+									if CanWQ and not Spells:IsReady(_Q) then
+										Control.CastSpell(HK_W)
+									end
+									Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+									return
+								end
+							end							
+						end
+					end
+				end
+				
+				local mode = Orb:GetMode()	
+				local target = Orb:GetTarget(1200)	
+				if target and (Spells:IsReady(_Q) or CanWQ) and ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value())) and Champion:IsValidEnemy(target) then
+					QGGPrediction:GetPrediction(target, myHero)
+					if QGGPrediction:CanHit(QHitChance) then
+						if CanWQ and not Spells:IsReady(_Q) then
+								Control.CastSpell(HK_W)
+						end
+						Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+						return
+					end
+				end
+			end)
+			
+			Callback.Add('Draw', function()
+				local QRange = 900
+				local ERange = 600
+				local RRange = 900
+				if Menu.q_rangedraw:Value() and Spells:IsReady(_Q) then				
+					Draw.Circle(myHero.pos, QRange, Draw.Color(200, 255, 0, 0))
+				end			
+				if Menu.e_rangedraw:Value() and Spells:IsReady(_E) then					
+					Draw.Circle(myHero.pos, ERange, Draw.Color(200, 0, 255, 255))
+				end				
+				if Menu.r_rangedraw:Value() and Spells:IsReady(_R) then				
+					Draw.Circle(myHero.pos, RRange, Draw.Color(200, 255, 255, 255))
 				end
 			end)
 
