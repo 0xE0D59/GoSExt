@@ -1,9 +1,10 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.5
+	version 1.6
 	
 	Changelog:
+	-- 1.6:	Added Renata
 	-- 1.5:	Added Pyke
 	-- 1.4:	Added Amumu
 	-- 1.3:	Added Tahm Kench
@@ -11,7 +12,7 @@
 	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]]--
-local Version = "1.4"
+local Version = "1.6"
 Callback.Add('Load', function()
     if not FileExist(COMMON_PATH .. "GGPrediction.lua") then
 		print('GGPrediction not found! Please download it before using this script.')
@@ -607,5 +608,148 @@ do
 			print('Sussy '..myHero.charName..' loaded.')
 		end
 		-- Amumu END
+		
+		-- Renata START
+		if myHero.charName == 'Renata' then
+			Menu:Init()
+			Menu.r:Remove()
+
+			Menu.q_combo = Menu.q:MenuElement({id = 'qcombo', name = 'Combo', value = true})
+			Menu.q_harass = Menu.q:MenuElement({id = 'qharass', name = 'Harass', value = true})
+			Menu.q_killsteal = Menu.q:MenuElement({id = 'qkillsteal', name = 'Killsteal', value = true})
+			Menu.q_range = Menu.q:MenuElement({id = "qrange", name = "Q Range", value = 900, min = 50, max = 900, step = 25})
+			Menu.q_hitchance = Menu.q:MenuElement({id = 'qhitchance', name = 'Hitchance', value = 1, drop = {'normal', 'high', 'immobile'}})
+			
+			Menu.w_self = Menu.w:MenuElement({id = 'wself', name = 'Use on self', value = true})
+			Menu.w_ally = Menu.w:MenuElement({id = 'wally', name = 'Use on allies', value = true})
+			Menu.w_hp = Menu.w:MenuElement({id = "whp", name = "HP% below", value = 20, min = 0, max = 100, step = 1})
+			Menu.w_enemies = Menu.w:MenuElement({id = "wenemies", name = "Enemies nearby", value = 1, min = 1, max = 5, step = 1})
+
+			Menu.e_combo = Menu.e:MenuElement({id = 'ecombo', name = 'Combo', value = true})
+			Menu.e_harass = Menu.e:MenuElement({id = 'eharass', name = 'Harass', value = true})
+			Menu.e_killsteal = Menu.e:MenuElement({id = 'ekillsteal', name = 'Killsteal', value = true})
+			Menu.e_range = Menu.e:MenuElement({id = "erange", name = "Q Range", value = 800, min = 50, max = 800, step = 25})
+			Menu.e_hitchance = Menu.e:MenuElement({id = 'ehitchance', name = 'Hitchance', value = 1, drop = {'normal', 'high', 'immobile'}})			
+			Menu.q_rangedraw = Menu.d:MenuElement({id = 'qrangedraw', name = 'Q Range', value = false})
+			Menu.w_rangedraw = Menu.d:MenuElement({id = 'wrangedraw', name = 'W Range', value = false})
+			Menu.e_rangedraw = Menu.d:MenuElement({id = 'erangedraw', name = 'E Range', value = false})
+			Menu.r_rangedraw = Menu.d:MenuElement({id = 'rrangedraw', name = 'R Range', value = false})
+			
+			local NextQCast = 0
+
+			Callback.Add('Tick', function()
+				if Orb:IsEvading() or Game.IsChatOpen() or myHero.dead then return end
+				local QRange = Menu.q_range:Value()
+				local WRange = 800
+				local ERange = Menu.e_range:Value()
+				local QGGPrediction = GGPrediction:SpellPrediction({Delay = 0.25, Radius = 70, Range = QRange, Speed = 1450, Type = GGPrediction.SPELLTYPE_LINE, Collision = true, MaxCollision = 0, CollisionTypes = {GGPrediction.COLLISION_MINION}})
+				local EGGPrediction = GGPrediction:SpellPrediction({Delay = 0.25, Radius = 200, Range = ERange, Speed = 1450, Type = GGPrediction.SPELLTYPE_LINE, Collision = false})
+				
+				if (Spells:IsReady(_W) and (Menu.w_self:Value() or Menu.w_ally:Value())) then
+					local nearbyEnemies = 0
+					for i = 1, Game.HeroCount() do 
+							local hero = Game.Hero(i)
+							if hero and hero.team ~= myHero.team and hero.valid and hero.alive and hero.visible and myHero.pos:DistanceTo(hero.pos) <= 1000 then
+								nearbyEnemies = nearbyEnemies + 1
+							end
+					end
+					if nearbyEnemies >= Menu.w_enemies:Value() then
+						for i = 1, Game.HeroCount() do 
+							local hero = Game.Hero(i)						
+							local distance = myHero.pos:DistanceTo(hero.pos)
+							if hero and hero.team == myHero.team and hero.valid and hero.alive and hero.visible and hero.isTargetable and distance <= WRange then
+								local hpPercent = 100 * hero.health / hero.maxHealth
+								if ((hero.networkID == myHero.networkID and Menu.w_self:Value()) or (hero.networkID ~= myHero.networkID and Menu.w_ally:Value())) and hpPercent <= Menu.w_hp:Value() then
+									Control.CastSpell(HK_W, hero)
+								end
+							end
+						end
+					end
+				end				
+				
+				if Spells:IsReady(_E) and Menu.e_killsteal:Value() then					
+					for i = 1, Game.HeroCount() do 
+						local hero = Game.Hero(i)
+						-- local edamage = getdmg("E", hero, myHero) -- TODO Return to DamageLib after its updated
+						local edamageraw = 35 + (30 * myHero:GetSpellData(_E).level) + (myHero.ap * 0.55)
+						local edamage = _G.SDK.Damage:CalculateDamage(myHero, hero, DAMAGE_TYPE_MAGICAL, edamageraw)						
+						local distance = myHero.pos:DistanceTo(hero.pos)
+						if hero and hero.team ~= myHero.team and hero.valid and hero.alive and hero.visible and hero.isTargetable and hero.health <= edamage and distance <= ERange + 100 then		
+							if distance <= 350 then
+								EGGPrediction.Delay = 0.25
+							else
+								EGGPrediction.Delay = 0.65
+							end
+							EGGPrediction:GetPrediction(hero, myHero)
+							if EGGPrediction:CanHit(Menu.e_hitchance:Value() + 1) then
+								Control.CastSpell(HK_E, EGGPrediction.CastPosition)
+								return
+							end
+						end
+					end
+				end				
+				if Spells:IsReady(_Q) and Menu.q_killsteal:Value() and NextQCast < Game.Timer() then					
+					for i = 1, Game.HeroCount() do 
+						local hero = Game.Hero(i)
+						-- local qdamage = getdmg("E", hero, myHero) -- TODO Return to DamageLib after its updated
+						local qdamageraw = 35 + (45 * myHero:GetSpellData(_Q).level) + (myHero.ap * 0.8)
+						local qdamage = _G.SDK.Damage:CalculateDamage(myHero, hero, DAMAGE_TYPE_MAGICAL, qdamageraw)
+						if hero and hero.team ~= myHero.team and hero.valid and hero.alive and hero.visible and hero.isTargetable and hero.health <= qdamage and myHero.pos:DistanceTo(hero.pos) <= QRange + 100 then		
+							QGGPrediction:GetPrediction(hero, myHero)
+							if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+								NextQCast = Game.Timer() + 1
+								Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+								return
+							end
+						end
+					end
+				end
+
+				local mode = Orb:GetMode()	
+				local target = Orb:GetTarget(1000)				
+				if Spells:IsReady(_Q) and ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value())) and NextQCast < Game.Timer() then
+					if target and target.valid and target.alive and target.visible and target.isTargetable then
+						QGGPrediction:GetPrediction(target, myHero)
+						if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+							NextQCast = Game.Timer() + 1
+							Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+							return
+						end
+					end
+				end				
+				
+				if target and Spells:IsReady(_E) and ((mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value())) then
+					if target and target.valid and target.alive and target.visible and target.isTargetable then
+						EGGPrediction:GetPrediction(target, myHero)
+						if EGGPrediction:CanHit(Menu.e_hitchance:Value() + 1) then
+							Control.CastSpell(HK_E, EGGPrediction.CastPosition)
+							return
+						end
+					end
+				end
+			end)
+			
+			Callback.Add('Draw', function()
+				local QRange = Menu.q_range:Value()
+				local WRange = 800
+				local ERange = Menu.e_range:Value()
+				local RRange = 2000
+				if Menu.q_rangedraw:Value() and Spells:IsReady(_Q) then					
+					Draw.Circle(myHero.pos, QRange, Draw.Color(200, 230, 250, 100))
+				end				
+				if Menu.w_rangedraw:Value() and Spells:IsReady(_W) then					
+					Draw.Circle(myHero.pos, WRange, Draw.Color(200, 255, 255, 255))
+				end				
+				if Menu.e_rangedraw:Value() and Spells:IsReady(_E) then					
+					Draw.Circle(myHero.pos, ERange, Draw.Color(200, 0, 255, 255))
+				end				
+				if Menu.r_rangedraw:Value() and Spells:IsReady(_R) then				
+					Draw.Circle(myHero.pos, RRange, Draw.Color(200, 255, 0, 0))
+				end
+			end)
+
+			print('Sussy '..myHero.charName..' loaded.')
+		end
+		-- Renata END
 	end
 end
