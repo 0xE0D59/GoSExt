@@ -408,11 +408,12 @@ do
 			Menu.r_range = Menu.d:MenuElement({id = 'rrange', name = 'R Range', value = false})
 			
 			local QStartTime = -1
+			local NextRTime = 0
 
 			Callback.Add('Tick', function()
 				if Orb:IsEvading() or Game.IsChatOpen() or myHero.dead then return end
 				if not Spells:IsReady(_Q) then QStartTime = -1 end
-				if Spells:IsReady(_R) and Menu.r_ks:Value() then
+				if Spells:IsReady(_R) and Menu.r_ks:Value() and NextQTime < Game.Timer() then
 					
 					local LvL = myHero.levelData.lvl
 					local Dmg1 = ({250, 250, 250, 250, 250, 250, 290, 330, 370, 400, 430, 450, 470, 490, 510, 530, 540, 550})[LvL]
@@ -427,10 +428,11 @@ do
 					
 					for i = 1, Game.HeroCount() do 
 						local hero = Game.Hero(i)
-						if hero and hero.team ~= myHero.team and hero.valid and hero.alive and myHero.pos:DistanceTo(hero.pos) <= 900 and hero.health <= RDmg then
+						if hero and hero.team ~= myHero.team and hero.valid and hero.alive and hero.isTargetable and myHero.pos:DistanceTo(hero.pos) <= 900 and hero.health <= RDmg then
 							local RPrediction = GGPrediction:SpellPrediction({Delay = 0.5, Radius = 250, Range = 750, Speed = 1000, Collision = false, Type = GGPrediction.SPELLTYPE_CIRCLE})
 							RPrediction:GetPrediction(hero, myHero)
-							if RPrediction:CanHit(Menu.r_hitchance:Value() + 1) then	
+							if RPrediction:CanHit(Menu.r_hitchance:Value() + 1) then
+								NextRTime = Game.Timer() + 0.2	
 								Control.CastSpell(HK_R, RPrediction.CastPosition)
 								return
 							end	
