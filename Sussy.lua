@@ -13,7 +13,7 @@
 	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]] --
-local Version = "1.6"
+local Version = "1.7"
 local LoadTime = 0
 Callback.Add(
     "Load",
@@ -1241,6 +1241,8 @@ do
             )
             Menu.q_autoboom = Menu.q:MenuElement({id = "qautoboom", name = "Auto if has bomb", value = true})
             Menu.q_autoimmobile = Menu.q:MenuElement({id = "qimmobile", name = "Auto on immobile", value = true})
+            Menu.q_disableattack =
+                Menu.q:MenuElement({id = "qdisableattack", name = "Disable attack if ready", value = true})
 
             Menu.w_reset = Menu.w:MenuElement({id = "w_reset", name = "Use to reset Q", value = true})
 
@@ -1280,6 +1282,22 @@ do
             Menu.q_rangedraw = Menu.d:MenuElement({id = "qrangedraw", name = "Q Range", value = false})
             Menu.e_rangedraw = Menu.d:MenuElement({id = "erangedraw", name = "E Range", value = false})
             Menu.r_rangedraw = Menu.d:MenuElement({id = "rrangedraw", name = "R Range", value = false})
+
+            if _G.SDK then
+                _G.SDK.Orbwalker:CanAttackEvent(
+                    function()
+                        if
+                            Menu.q_disableattack:Value() and
+                                ((_G.SDK.Orbwalker.Modes[_G.SDK.ORBWALKER_MODE_COMBO] and "Combo") or
+                                    (_G.SDK.Orbwalker.Modes[_G.SDK.ORBWALKER_MODE_HARASS] and "Harass")) and
+                                myHero:GetSpellData(_Q).currentCd <= 1
+                         then
+                            return false
+                        end
+                        return true
+                    end
+                )
+            end
 
             local NextQCast = Game.Timer()
             local NextECast = Game.Timer()
