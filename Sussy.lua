@@ -74,6 +74,29 @@ end
 
 Spells = {}
 do
+	Spells.InterruptableSpells = {
+		["CaitlynAceintheHole"] = true,
+		["Crowstorm"] = true,
+		["DrainChannel"] = true,
+		["GalioIdolOfDurand"] = true,
+		["ReapTheWhirlwind"] = true,
+		["KarthusFallenOne"] = true,
+		["KatarinaR"] = true,
+		["LucianR"] = true,
+		["AlZaharNetherGrasp"] = true,
+		["Meditate"] = true,
+		["MissFortuneBulletTime"] = true,
+		["AbsoluteZero"] = true,
+		["PantheonRJump"] = true,
+		["PantheonRFall"] = true,
+		["ShenStandUnited"] = true,
+		["Destiny"] = true,
+		["UrgotSwap2"] = true,
+		["VelkozR"] = true,
+		["InfiniteDuress"] = true,
+		["XerathLocusOfPower2"] = true,
+	}
+	
 	function Spells:IsReady(spell)
 		return myHero:GetSpellData(spell).currentCd == 0 and myHero:GetSpellData(spell).level > 0 and myHero:GetSpellData(spell).mana <= myHero.mana and Game.CanUseSpell(spell) == 0
 	end
@@ -136,6 +159,88 @@ end
 
 Champion = {}
 do
+	
+	
+	function Champion:IsValid(unit)
+		if unit and unit.valid and unit.isTargetable and unit.alive and unit.visible and unit.networkID and unit.health > 0 then
+			return true
+		end
+		return false
+	end
+	
+	function Champion:IsValidEnemy(unit)
+		if unit and unit.team ~= myHero.team and Champion:IsValid(unit) then
+			return true
+		end
+	end
+	
+	function Champion:IsValidAlly(unit)
+		if unit and unit.team == myHero.team and Champion:IsValid(unit) then
+			return true
+		end
+	end
+	
+	function Champion:IsRecalling(unit)
+		if unit and unit.valid then 
+			local buffCount = unit.buffCount
+			for i = 1, buffCount do
+				local buff = unit:GetBuff(i) 
+				if buff.count > 0 and buff.name == "recall" and Game.Timer() < buff.expireTime then
+					return true
+				end
+			end
+		end
+		return false
+	end
+	
+	function Champion:MyHeroNotReady()
+		return myHero.dead or Game.IsChatOpen() or Orb:IsEvading() or Champion:IsRecalling(myHero)
+	end
+	
+	function Champion:GetValidEnemies(pos, range)
+		local enemies = {}
+		for i = 1, Game.HeroCount() do 
+			local hero = Game.Hero(i)
+			if hero and Champion:IsValidEnemy(hero) then
+				table.insert(enemies, hero)
+			end
+		end
+		return enemies
+	end
+	
+	function Champion:GetValidAllies(pos, range)
+		local enemies = {}
+		for i = 1, Game.HeroCount() do 
+			local hero = Game.Hero(i)
+			if hero and Champion:IsValidAlly(hero) then
+				table.insert(enemies, hero)
+			end
+		end
+		return enemies
+	end
+	
+	function Champion:GetValidEnemiesCount(pos, range)
+		local count = 0
+		for i = 1, Game.HeroCount() do 
+			local hero = Game.Hero(i)
+			if hero and Champion:IsValidEnemy(hero) then
+				count = count + 1
+			end
+		end
+		return count
+	end
+	
+	function Champion:GetValidAlliesCount(pos, range)
+		local count = 0
+		for i = 1, Game.HeroCount() do 
+			local hero = Game.Hero(i)
+			if hero and Champion:IsValidAlly(hero) then
+				count = count + 1
+			end
+		end
+		return count
+	end
+
 	function Champion:Init()
 		-- Vi START
 		if myHero.charName == 'Vi' then
@@ -619,6 +724,8 @@ do
 			Menu.q_killsteal = Menu.q:MenuElement({id = 'qkillsteal', name = 'Killsteal', value = true})
 			Menu.q_range = Menu.q:MenuElement({id = "qrange", name = "Q Range", value = 900, min = 50, max = 900, step = 25})
 			Menu.q_hitchance = Menu.q:MenuElement({id = 'qhitchance', name = 'Hitchance', value = 1, drop = {'normal', 'high', 'immobile'}})
+			Menu.q_interrupt = Menu.q:MenuElement({id = 'qinterrupt', name = 'Interrupt', value = true})
+			Menu.q_autoimmobile = Menu.q:MenuElement({id = 'qimmobile', name = 'Auto on immobile', value = true})
 			
 			Menu.w_self = Menu.w:MenuElement({id = 'wself', name = 'Use on self', value = true})
 			Menu.w_ally = Menu.w:MenuElement({id = 'wally', name = 'Use on allies', value = true})
@@ -638,43 +745,50 @@ do
 			local NextQCast = 0
 
 			Callback.Add('Tick', function()
-				if Orb:IsEvading() or Game.IsChatOpen() or myHero.dead then return end
+				if Champion:MyHeroNotReady() then return end
 				local QRange = Menu.q_range:Value()
 				local WRange = 800
 				local ERange = Menu.e_range:Value()
 				local QGGPrediction = GGPrediction:SpellPrediction({Delay = 0.25, Radius = 70, Range = QRange, Speed = 1450, Type = GGPrediction.SPELLTYPE_LINE, Collision = true, MaxCollision = 0, CollisionTypes = {GGPrediction.COLLISION_MINION}})
 				local EGGPrediction = GGPrediction:SpellPrediction({Delay = 0.25, Radius = 200, Range = ERange, Speed = 1450, Type = GGPrediction.SPELLTYPE_LINE, Collision = false})
+				local validEnemies = Champion:GetValidEnemies(myHero.pos, 1200)
+				local validAllies = Champion:GetValidAllies(myHero.pos, 1200)
 				
 				if (Spells:IsReady(_W) and (Menu.w_self:Value() or Menu.w_ally:Value())) then
-					local nearbyEnemies = 0
-					for i = 1, Game.HeroCount() do 
-							local hero = Game.Hero(i)
-							if hero and hero.team ~= myHero.team and hero.valid and hero.alive and hero.visible and myHero.pos:DistanceTo(hero.pos) <= 1000 then
-								nearbyEnemies = nearbyEnemies + 1
+					for i = 1, #validAllies do 
+						local hero = validAllies(i)
+						if  myHero.pos:DistanceTo(hero.pos) <= WRange + 25 then
+							local hpPercent = 100 * hero.health / hero.maxHealth
+							if ((hero.networkID == myHero.networkID and Menu.w_self:Value()) or (hero.networkID ~= myHero.networkID and Menu.w_ally:Value())) and hpPercent <= Menu.w_hp:Value() and Champion:GetNearbyEnemyCount(hero.pos, 800) then
+								Control.CastSpell(HK_W, hero)
 							end
+						end
 					end
-					if nearbyEnemies >= Menu.w_enemies:Value() then
-						for i = 1, Game.HeroCount() do 
-							local hero = Game.Hero(i)						
-							local distance = myHero.pos:DistanceTo(hero.pos)
-							if hero and hero.team == myHero.team and hero.valid and hero.alive and hero.visible and hero.isTargetable and distance <= WRange then
-								local hpPercent = 100 * hero.health / hero.maxHealth
-								if ((hero.networkID == myHero.networkID and Menu.w_self:Value()) or (hero.networkID ~= myHero.networkID and Menu.w_ally:Value())) and hpPercent <= Menu.w_hp:Value() then
-									Control.CastSpell(HK_W, hero)
-								end
+				end
+				
+				if Spells:IsReady(_Q) and Menu.q_interrupt:Value() and Game.Timer() > NextQCast then					
+					for i = 1, #validEnemies do 
+						local hero = validEnemies(i)
+						local spell = hero.activeSpell
+						if hero and spell and spell.valid and myHero.pos:DistanceTo(hero.pos) <= 1000 and Spells.InterruptableSpells[spell.name] and spell.castEndTime - Game.Timer() > 0.33 then
+							QGGPrediction:GetPrediction(hero, myHero)
+							if QGGPrediction:CanHit(2) then
+								NextQCast = Game.Timer() + 2
+								Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+								return
 							end
 						end
 					end
 				end				
 				
 				if Spells:IsReady(_E) and Menu.e_killsteal:Value() then					
-					for i = 1, Game.HeroCount() do 
-						local hero = Game.Hero(i)
+					for i = 1, #validEnemies do 
+						local hero = validEnemies(i)
 						-- local edamage = getdmg("E", hero, myHero) -- TODO Return to DamageLib after its updated
 						local edamageraw = 35 + (30 * myHero:GetSpellData(_E).level) + (myHero.ap * 0.55)
-						local edamage = _G.SDK.Damage:CalculateDamage(myHero, hero, DAMAGE_TYPE_MAGICAL, edamageraw)						
+						local edamage = _G.SDK.Damage:CalculateDamage(myHero, hero, DAMAGE_TYPE_MAGICAL, edamageraw)
 						local distance = myHero.pos:DistanceTo(hero.pos)
-						if hero and hero.team ~= myHero.team and hero.valid and hero.alive and hero.visible and hero.isTargetable and hero.health <= edamage and distance <= ERange + 100 then		
+						if hero.health <= edamage and distance <= ERange + 100 then		
 							if distance <= 350 then
 								EGGPrediction.Delay = 0.25
 							else
@@ -688,16 +802,16 @@ do
 						end
 					end
 				end				
-				if Spells:IsReady(_Q) and Menu.q_killsteal:Value() and NextQCast < Game.Timer() then					
-					for i = 1, Game.HeroCount() do 
-						local hero = Game.Hero(i)
+				if Spells:IsReady(_Q) and Menu.q_killsteal:Value() and Game.Timer() > NextQCast then					
+					for i = 1, #validEnemies do 
+						local hero = validEnemies(i)
 						-- local qdamage = getdmg("E", hero, myHero) -- TODO Return to DamageLib after its updated
 						local qdamageraw = 35 + (45 * myHero:GetSpellData(_Q).level) + (myHero.ap * 0.8)
 						local qdamage = _G.SDK.Damage:CalculateDamage(myHero, hero, DAMAGE_TYPE_MAGICAL, qdamageraw)
-						if hero and hero.team ~= myHero.team and hero.valid and hero.alive and hero.visible and hero.isTargetable and hero.health <= qdamage and myHero.pos:DistanceTo(hero.pos) <= QRange + 100 then		
+						if hero.health <= qdamage and myHero.pos:DistanceTo(hero.pos) <= QRange + 100 then		
 							QGGPrediction:GetPrediction(hero, myHero)
 							if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
-								NextQCast = Game.Timer() + 1
+								NextQCast = Game.Timer() + 2
 								Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
 								return
 							end
@@ -706,12 +820,12 @@ do
 				end
 
 				local mode = Orb:GetMode()	
-				local target = Orb:GetTarget(1000)				
-				if Spells:IsReady(_Q) and ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value())) and NextQCast < Game.Timer() then
-					if target and target.valid and target.alive and target.visible and target.isTargetable then
+				local target = Orb:GetTarget(1200)				
+				if Spells:IsReady(_Q) and ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value())) and Game.Timer() > NextQCast then
+					if target and Champion:IsValidEnemy(target) then
 						QGGPrediction:GetPrediction(target, myHero)
 						if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
-							NextQCast = Game.Timer() + 1
+							NextQCast = Game.Timer() + 2
 							Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
 							return
 						end
@@ -719,7 +833,7 @@ do
 				end				
 				
 				if target and Spells:IsReady(_E) and ((mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value())) then
-					if target and target.valid and target.alive and target.visible and target.isTargetable then
+					if target and and Champion:IsValidEnemy(target) then
 						EGGPrediction:GetPrediction(target, myHero)
 						if EGGPrediction:CanHit(Menu.e_hitchance:Value() + 1) then
 							Control.CastSpell(HK_E, EGGPrediction.CastPosition)
