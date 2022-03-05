@@ -1285,7 +1285,10 @@ do
                     local WCost = 35
                     local ECost = 50
                     local WQCost = WCost + QCost
-                    local CanWQ = Menu.w_reset:Value() and Spells:IsReady(_W) and myHero.mana >= WQCost
+                    local QCooldown = myHero:GetSpellData(_Q).currentCd
+                    local CanWQ =
+                        Menu.w_reset:Value() and Spells:IsReady(_W) and myHero.mana >= WQCost and not Spells:IsReady(_Q) and
+                        QCooldown >= 1
                     local QHitChance = Menu.q_hitchance:Value() + 1
                     local QGGPrediction =
                         GGPrediction:SpellPrediction(
