@@ -1032,11 +1032,21 @@ do
             )
             Menu.q_interrupt = Menu.q:MenuElement({id = "qinterrupt", name = "Interrupt", value = true})
 
-            Menu.w_self = Menu.w:MenuElement({id = "wself", name = "Use on self", value = true})
-            Menu.w_ally = Menu.w:MenuElement({id = "wally", name = "Use on allies", value = true})
+            Menu.w_auto = Menu.w:MenuElement({id = "wauto", name = "Auto use", value = true})
             Menu.w_hp = Menu.w:MenuElement({id = "whp", name = "HP% below", value = 20, min = 0, max = 100, step = 1})
             Menu.w_enemies =
                 Menu.w:MenuElement({id = "wenemies", name = "Enemies nearby", value = 1, min = 1, max = 5, step = 1})
+            Menu.w_targets = Menu.e:MenuElement({id = "renatawtargers", name = "Use on: ", type = MENU})
+            DelayAction(
+                function()
+                    for i, target in pairs(Champion:GetEnemies()) do
+                        Menu.w_targets:MenuElement(
+                            {id = "RenataW_" .. target.charName, name = target.charName, value = true}
+                        )
+                    end
+                end,
+                1
+            )
 
             Menu.e_combo = Menu.e:MenuElement({id = "ecombo", name = "Combo", value = true})
             Menu.e_harass = Menu.e:MenuElement({id = "eharass", name = "Harass", value = true})
@@ -1090,14 +1100,14 @@ do
                     local validEnemies = Champion:GetValidEnemies(myHero.pos, 1200)
                     local validAllies = Champion:GetValidAllies(myHero.pos, 1200)
 
-                    if (Spells:IsReady(_W) and (Menu.w_self:Value() or Menu.w_ally:Value())) then
+                    if Spells:IsReady(_W) and Menu.w_auto:Value() then
+                        local minHP = Menu.w_hp:Value()
                         for i = 1, #validAllies do
                             local hero = validAllies[i]
                             if myHero.pos:DistanceTo(hero.pos) <= WRange + 25 then
                                 if
-                                    ((hero.networkID == myHero.networkID and Menu.w_self:Value()) or
-                                        (hero.networkID ~= myHero.networkID and Menu.w_ally:Value())) and
-                                        Champion:HealthPercent(hero) <= Menu.w_hp:Value() and
+                                    Menu.w_targets["RenataW_" .. hero.charName]:Value() and
+                                        Champion:HealthPercent(hero) <= minHP and
                                         Champion:GetValidEnemiesCount(hero.pos, 800)
                                  then
                                     Control.CastSpell(HK_W, hero)
