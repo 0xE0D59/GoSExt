@@ -254,7 +254,7 @@ do
 				local behindDmg = 15 + (35 / 17 * (myHero.levelData.lvl - 1)) + myHero.ap * 0.1
 				for i = 1, Game.HeroCount() do 
 					local hero = Game.Hero(i)
-					if hero and hero.team ~= myHero.team and hero.valid and hero.alive and myHero.pos:DistanceTo(hero.pos) <= 625 then
+					if hero and hero.team ~= myHero.team and hero.valid and hero.visible and hero.alive and hero.isTargetable and myHero.pos:DistanceTo(hero.pos) <= 625 then
 						local health = hero.health + (2 * hero.hpRegen)
 						local extraDamage = 0
 						if Menu.e_ks_backstab:Value() and not _G.SDK.ObjectManager:IsFacing(hero, myHero) then
