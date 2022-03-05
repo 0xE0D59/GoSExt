@@ -238,8 +238,17 @@ do
         return 0
     end
 
+    function Champion:IsPlayerAtFountain()
+        local blueFountain = Vector(500, 180, 500)
+        local redFountain = Vector(14250, 170, 14250)
+        local distance = 800
+        local pos = myHero.pos
+        return pos:DistanceTo(blueFountain) <= distance or pos:DistanceTo(redFountain) <= 800
+    end
+
     function Champion:MyHeroNotReady()
-        return myHero.dead or Game.IsChatOpen() or Orb:IsEvading() or Champion:IsRecalling(myHero)
+        return myHero.dead or Game.IsChatOpen() or Orb:IsEvading() or Champion:IsRecalling(myHero) or
+            Champion:IsPlayerAtFountain(myHero)
     end
 
     function Champion:GetEnemies()
