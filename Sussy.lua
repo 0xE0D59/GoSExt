@@ -1036,10 +1036,10 @@ do
             Menu.w_hp = Menu.w:MenuElement({id = "whp", name = "HP% below", value = 20, min = 0, max = 100, step = 1})
             Menu.w_enemies =
                 Menu.w:MenuElement({id = "wenemies", name = "Enemies nearby", value = 1, min = 1, max = 5, step = 1})
-            Menu.w_targets = Menu.e:MenuElement({id = "renatawtargers", name = "Use on: ", type = MENU})
+            Menu.w_targets = Menu.w:MenuElement({id = "renatawtargers", name = "Use on: ", type = MENU})
             DelayAction(
                 function()
-                    for i, target in pairs(Champion:GetEnemies()) do
+                    for i, target in pairs(Champion:GetAllies()) do
                         Menu.w_targets:MenuElement(
                             {id = "RenataW_" .. target.charName, name = target.charName, value = true}
                         )
