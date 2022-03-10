@@ -722,7 +722,7 @@ do
                     if not Spells:IsReady(_Q) then
                         QStartTime = -1
                     end
-                    if Spells:IsReady(_R) and Menu.r_ks:Value() and NextQTime < Game.Timer() then
+                    if Spells:IsReady(_R) and Menu.r_ks:Value() and NextRTime < Game.Timer() then
                         local LvL = myHero.levelData.lvl
                         local Dmg1 =
                             ({250, 250, 250, 250, 250, 250, 290, 330, 370, 400, 430, 450, 470, 490, 510, 530, 540, 550})[
@@ -1472,5 +1472,39 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Renata END
+		
+		        -- Garen START
+        if myHero.charName == "Garen" then
+            Menu:Init()
+            Menu.q:Remove()
+            Menu.w:Remove()
+            Menu.e:Remove()
+            Menu.r:Remove()
+            Callback.Add(
+                "Tick",
+                function()
+                    if Champion:MyHeroNotReady() then
+                        return
+                    end
+                    
+                end
+            )
+
+            Callback.Add(
+                "Draw",
+                function()
+                    if Menu.q_range:Value() and Spells:IsReady(_Q) then
+                        Draw.Circle(myHero.pos, 1100, Draw.Color(255, 255, 255, 100))
+                    end
+                    if Menu.r_range:Value() and Spells:IsReady(_R) then
+                        Draw.Circle(myHero.pos, 750, Draw.Color(255, 0, 0, 100))
+                    end
+                end
+            )
+
+            print("Sussy " .. myHero.charName .. " loaded.")
+        end
+        -- Garen END
+
     end
 end
