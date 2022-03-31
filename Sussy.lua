@@ -299,7 +299,7 @@ do
         local count = 0
         for i = 1, Game.HeroCount() do
             local hero = Game.Hero(i)
-            if hero and Champion:IsValidEnemy(hero) then
+            if hero and Champion:IsValidEnemy(hero) and pos:DistanceTo(hero.pos) <= range then
                 count = count + 1
             end
         end
@@ -1472,39 +1472,5 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Renata END
-		
-		        -- Garen START
-        if myHero.charName == "Garen" then
-            Menu:Init()
-            Menu.q:Remove()
-            Menu.w:Remove()
-            Menu.e:Remove()
-            Menu.r:Remove()
-            Callback.Add(
-                "Tick",
-                function()
-                    if Champion:MyHeroNotReady() then
-                        return
-                    end
-                    
-                end
-            )
-
-            Callback.Add(
-                "Draw",
-                function()
-                    if Menu.q_range:Value() and Spells:IsReady(_Q) then
-                        Draw.Circle(myHero.pos, 1100, Draw.Color(255, 255, 255, 100))
-                    end
-                    if Menu.r_range:Value() and Spells:IsReady(_R) then
-                        Draw.Circle(myHero.pos, 750, Draw.Color(255, 0, 0, 100))
-                    end
-                end
-            )
-
-            print("Sussy " .. myHero.charName .. " loaded.")
-        end
-        -- Garen END
-
     end
 end
