@@ -1,9 +1,10 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.7
+	version 1.8
 	
 	Changelog:
+	-- 1.8: Added Nautilus
 	-- 1.7:	Added Zilean
 	-- 1.6:	Added Renata
 	-- 1.5:	Added Pyke
@@ -439,9 +440,9 @@ do
                     local mode = Orb:GetMode()
                     if
                         Spells:IsReady(_E) and
-                            ((mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value()))
-                     then
-                        local target = Orb:GetTarget(250)
+                            ((mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value())) 
+                    then
+                        local target = Orb:GetTarget(300)
                         if target then
                             Control.CastSpell(HK_E)
                         end
@@ -1016,6 +1017,97 @@ do
         end
         -- Amumu END
 
+        -- Nautilus START
+        if myHero.charName == "Nautilus" then
+            Menu:Init()
+
+            Menu.q_combo = Menu.q:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.q_harass = Menu.q:MenuElement({id = "harass", name = "Harass", value = false})
+            Menu.q_killsteal = Menu.q:MenuElement({id = "combo", name = "Killsteal", value = true})
+            Menu.q_range =
+                Menu.q:MenuElement({id = "qrange", name = "Q Range", value = 925, min = 25, max = 925, step = 25})
+            Menu.q_hitchance =
+                Menu.q:MenuElement(
+                {id = "hitchance", name = "Hitchance", value = 1, drop = {"Normal", "High", "Immobile"}}
+            )
+
+            Menu.w:Remove()
+            Menu.e:Remove()
+            Menu.r:Remove()
+
+            Menu.q_range = Menu.d:MenuElement({id = "qrange", name = "Q Range", value = true})
+
+            local QGGPrediction =
+                GGPrediction:SpellPrediction(
+                {
+                    Delay = 0.25,
+                    Radius = 90,
+                    Range = 925,
+                    Speed = 2000,
+                    Type = GGPrediction.SPELLTYPE_LINE,
+                    Collision = true,
+                    MaxCollision = 0,
+                    CollisionTypes = {GGPrediction.COLLISION_MINION}
+                }
+            )
+
+            Callback.Add(
+                "Tick",
+                function()
+                    if Orb:IsEvading() or Game.IsChatOpen() or myHero.dead or myHero.isChanneling then
+                        return
+                    end
+                    local mode = Orb:GetMode()
+
+                    if Spells:IsReady(_Q) then
+                        if Menu.q_killsteal:Value() then
+                            local count = 0
+                            for i = 1, Game.HeroCount() do
+                                local hero = Game.Hero(i)
+                                if
+                                    hero and hero.team ~= myHero.team and hero.valid and hero.alive and
+                                        myHero.pos:DistanceTo(hero.pos) <= 1050
+                                 then
+                                    local qdamage = getdmg("Q", hero, myHero)
+                                    if qdamage > hero.health + (2 * hero.hpRegen) then
+                                        QGGPrediction.Range = 925
+                                        QGGPrediction:GetPrediction(hero, myHero)
+                                        if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+                                            Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                            return
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        if (mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()) then
+                            QGGPrediction.Range = Menu.q_range:Value()
+                            local target = Orb:GetTarget(QGGPrediction.Range)
+                            if target then
+                                QGGPrediction:GetPrediction(target, myHero)
+                                if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+                                    Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end
+            )
+
+            Callback.Add(
+                "Draw",
+                function()
+                    if Menu.q_range:Value() and Spells:IsReady(_Q) then
+                        Draw.Circle(myHero.pos, QGG, Draw.Color(255, 255, 255, 100))
+                    end
+                end
+            )
+
+            print("Sussy " .. myHero.charName .. " loaded.")
+        end
+        -- Nautilus END
+
         -- Renata START
         if myHero.charName == "Renata" then
             Menu:Init()
@@ -1250,6 +1342,8 @@ do
                 {id = "qhitchance", name = "Hitchance", value = 1, drop = {"normal", "high", "immobile"}}
             )
             Menu.q_autoboom = Menu.q:MenuElement({id = "qautoboom", name = "Auto if has bomb", value = true})
+            Menu.q_autoboom_slowed =
+                Menu.q:MenuElement({id = "qautoboom_slowed", name = "Auto on slowed", value = true})
             Menu.q_autoimmobile = Menu.q:MenuElement({id = "qimmobile", name = "Auto on immobile", value = true})
             Menu.q_disableattack =
                 Menu.q:MenuElement({id = "qdisableattack", name = "Disable attack if ready", value = true})
@@ -1408,24 +1502,25 @@ do
                                         Control.CastSpell(HK_W)
                                     end
                                     Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
-                                    NextQCast = Game.Timer() + 0.2
+                                    NextQCast = Game.Timer() + 0.1
                                     return
                                 end
                             end
                         end
-                        if Menu.q_autoboom:Value() then
-                            for i = 1, #validEnemies do
-                                local hero = validEnemies[i]
-                                if Champion:HasZileanBomb(hero) then
-                                    QGGPrediction:GetPrediction(hero, myHero)
-                                    if QGGPrediction:CanHit(2) then
-                                        if CanWQ and not Spells:IsReady(_Q) then
-                                            Control.CastSpell(HK_W)
-                                        end
-                                        Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
-                                        NextQCast = Game.Timer() + 0.2
-                                        return
+                        for i = 1, #validEnemies do
+                            local hero = validEnemies[i]
+                            if
+                                (Menu.q_autoboom:Value() and Champion:HasZileanBomb(hero)) or
+                                    (Menu.q_autoboom_slowed:Value() and hero.ms <= 300)
+                             then
+                                QGGPrediction:GetPrediction(hero, myHero)
+                                if QGGPrediction:CanHit(2) then
+                                    if CanWQ and not Spells:IsReady(_Q) then
+                                        Control.CastSpell(HK_W)
                                     end
+                                    Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                    NextQCast = Game.Timer() + 0.1
+                                    return
                                 end
                             end
                         end
