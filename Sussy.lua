@@ -1,9 +1,10 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.8
+	version 1.9
 	
 	Changelog:
+	-- 1.9: Added Dr Mundo
 	-- 1.8: Added Nautilus
 	-- 1.7:	Added Zilean
 	-- 1.6:	Added Renata
@@ -14,7 +15,7 @@
 	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]] --
-local Version = "1.7"
+local Version = "1.9"
 local LoadTime = 0
 Callback.Add(
     "Load",
@@ -138,6 +139,11 @@ do
             myHero:GetSpellData(spell).mana <= myHero.mana and
             Game.CanUseSpell(spell) == 0
     end
+
+    function Spells:IsNotReady(spell)
+        if not Spells:IsReady(spell) then return true end
+        return false
+    end
 end
 
 Orb = {}
@@ -155,6 +161,41 @@ do
             return _G.PremiumOrbwalker:GetMode()
         end
         return nil
+    end
+
+    function Orb:IsCombo()
+        if Orb:GetMode() == "Combo" then
+            return true
+        end
+        return false
+    end
+
+    function Orb:IsHarass()
+        if Orb:GetMode() == "Harass" then
+            return true
+        end
+        return false
+    end
+
+    function Orb:IsClear()
+        if Orb:GetMode() == "Clear" then
+            return true
+        end
+        return false
+    end
+
+    function Orb:IsLastHit()
+        if Orb:GetMode() == "LastHit" then
+            return true
+        end
+        return false
+    end
+
+    function Orb:IsFlee()
+        if Orb:GetMode() == "Flee" then
+            return true
+        end
+        return false
     end
 
     function Orb:GetTarget(range)
@@ -248,7 +289,8 @@ do
     end
 
     function Champion:MyHeroNotReady()
-        return myHero.dead or Game.IsChatOpen() or Orb:IsEvading() or Champion:IsRecalling(myHero) or
+        return myHero.dead or Game.IsChatOpen() or Orb:IsEvading() or myHero.isChanneling or
+            Champion:IsRecalling(myHero) or
             Champion:IsPlayerAtFountain(myHero)
     end
 
@@ -358,7 +400,7 @@ do
             Callback.Add(
                 "Tick",
                 function()
-                    if Orb:IsEvading() or Game.IsChatOpen() or myHero.dead then
+                    if Champion:MyHeroNotReady() then
                         return
                     end
                     local mode = Orb:GetMode()
@@ -440,8 +482,8 @@ do
                     local mode = Orb:GetMode()
                     if
                         Spells:IsReady(_E) and
-                            ((mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value())) 
-                    then
+                            ((mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value()))
+                     then
                         local target = Orb:GetTarget(300)
                         if target then
                             Control.CastSpell(HK_E)
@@ -471,10 +513,7 @@ do
             Callback.Add(
                 "Tick",
                 function()
-                    if
-                        not Menu.e_ks_enabled:Value() or not Spells:IsReady(_E) or Orb:IsEvading() or Game.IsChatOpen() or
-                            myHero.dead
-                     then
+                    if not Spells:IsReady(_E) or Champion:MyHeroNotReady() then
                         return
                     end
 
@@ -489,9 +528,7 @@ do
                     for i = 1, Game.HeroCount() do
                         local hero = Game.Hero(i)
                         if
-                            hero and hero.team ~= myHero.team and hero.valid and hero.visible and hero.alive and
-                                hero.isTargetable and
-                                myHero.pos:DistanceTo(hero.pos) <= 625
+                            Champion:IsValidEnemy(hero) and myHero.pos:DistanceTo(hero.pos) <= 625
                          then
                             local health = hero.health + (2 * hero.hpRegen)
                             local extraDamage = 0
@@ -546,7 +583,7 @@ do
             Callback.Add(
                 "Tick",
                 function()
-                    if not Spells:IsReady(_Q) or Orb:IsEvading() or Game.IsChatOpen() or myHero.dead then
+                    if not Spells:IsReady(_Q) or Champion:MyHeroNotReady() then
                         return
                     end
 
@@ -626,7 +663,7 @@ do
             Callback.Add(
                 "Tick",
                 function()
-                    if Orb:IsEvading() or Game.IsChatOpen() or myHero.dead then
+                    if Champion:MyHeroNotReady() then
                         return
                     end
                     local mode = Orb:GetMode()
@@ -717,13 +754,13 @@ do
             Callback.Add(
                 "Tick",
                 function()
-                    if Orb:IsEvading() or Game.IsChatOpen() or myHero.dead then
+                    if Champion:MyHeroNotReady() then
                         return
                     end
                     if not Spells:IsReady(_Q) then
                         QStartTime = -1
                     end
-                    if Spells:IsReady(_R) and Menu.r_ks:Value() and NextRTime < Game.Timer() then
+                    if NextRTime < Game.Timer() and Menu.r_ks:Value() and Spells:IsReady(_R) then
                         local LvL = myHero.levelData.lvl
                         local Dmg1 =
                             ({250, 250, 250, 250, 250, 250, 290, 330, 370, 400, 430, 450, 470, 490, 510, 530, 540, 550})[
@@ -758,7 +795,7 @@ do
                                 )
                                 RPrediction:GetPrediction(hero, myHero)
                                 if RPrediction:CanHit(Menu.r_hitchance:Value() + 1) then
-                                    NextRTime = Game.Timer() + 0.2
+                                    NextRTime = Game.Timer() + 0.35
                                     Control.CastSpell(HK_R, RPrediction.CastPosition)
                                     return
                                 end
@@ -911,7 +948,7 @@ do
             Callback.Add(
                 "Tick",
                 function()
-                    if Orb:IsEvading() or Game.IsChatOpen() or myHero.dead or myHero.isChanneling then
+                    if Champion:MyHeroNotReady() then
                         return
                     end
                     local mode = Orb:GetMode()
@@ -1017,6 +1054,114 @@ do
         end
         -- Amumu END
 
+        -- DrMundo START
+        if myHero.charName == "DrMundo" then
+            Menu:Init()
+
+            Menu.q_combo = Menu.q:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.q_harass = Menu.q:MenuElement({id = "harass", name = "Harass", value = false})
+            Menu.q_killsteal = Menu.q:MenuElement({id = "combo", name = "Killsteal", value = true})
+            Menu.q_range =
+                Menu.q:MenuElement({id = "qrange", name = "Q Range", value = 1000, min = 25, max = 1000, step = 25})
+            Menu.q_hitchance =
+                Menu.q:MenuElement(
+                {id = "hitchance", name = "Hitchance", value = 1, drop = {"Normal", "High", "Immobile"}}
+            )
+
+            Menu.e_combo = Menu.e:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.e_harass = Menu.e:MenuElement({id = "harass", name = "Harass", value = false})
+
+            Menu.w:Remove()
+            Menu.r:Remove()
+
+            Menu.q_rangedraw = Menu.d:MenuElement({id = "qrangedraw", name = "Q Range", value = true})
+
+            local QGGPrediction =
+                GGPrediction:SpellPrediction(
+                {
+                    Delay = 0.25,
+                    Radius = 60,
+                    Range = 1000,
+                    Speed = 2000,
+                    Type = GGPrediction.SPELLTYPE_LINE,
+                    Collision = true,
+                    MaxCollision = 0,
+                    CollisionTypes = {GGPrediction.COLLISION_MINION}
+                }
+            )
+
+            Callback.Add(
+                "Tick",
+                function()
+                    if Champion:MyHeroNotReady() then
+                        return
+                    end
+                    local mode = Orb:GetMode()
+
+                    if Spells:IsReady(_Q) then
+                        if Menu.q_killsteal:Value() then
+                            local count = 0
+                            for i = 1, Game.HeroCount() do
+                                local hero = Game.Hero(i)
+                                if
+                                    hero and hero.team ~= myHero.team and hero.valid and hero.alive and
+                                        myHero.pos:DistanceTo(hero.pos) <= 1050
+                                 then
+                                    local qdamage = getdmg("Q", hero, myHero)
+                                    if qdamage > hero.health + (2 * hero.hpRegen) then
+                                        QGGPrediction.Range = 1050
+                                        QGGPrediction:GetPrediction(hero, myHero)
+                                        if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+                                            Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                            return
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        if (mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()) then
+                            QGGPrediction.Range = Menu.q_range:Value()
+                            local target = Orb:GetTarget(QGGPrediction.Range)
+                            if target then
+                                QGGPrediction:GetPrediction(target, myHero)
+                                if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+                                    Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end
+            )
+
+            Callback.Add(
+                "Draw",
+                function()
+                    if Menu.q_rangedraw:Value() and Spells:IsReady(_Q) then
+                        Draw.Circle(myHero.pos, Menu.q_range:Value(), Draw.Color(255, 255, 255, 100))
+                    end
+                end
+            )
+
+            Orb:OnPostAttack(
+                function()
+                    local mode = Orb:GetMode()
+                    if
+                        Spells:IsReady(_E) and
+                            ((mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value()))
+                     then
+                        local target = Orb:GetTarget(300)
+                        if target then
+                            Control.CastSpell(HK_E)
+                        end
+                    end
+                end
+            )
+
+            print("Sussy " .. myHero.charName .. " loaded.")
+        end
+        -- DrMundo END
+
         -- Nautilus START
         if myHero.charName == "Nautilus" then
             Menu:Init()
@@ -1054,7 +1199,7 @@ do
             Callback.Add(
                 "Tick",
                 function()
-                    if Orb:IsEvading() or Game.IsChatOpen() or myHero.dead or myHero.isChanneling then
+                    if not Spells:IsReady(_Q) or Champion:MyHeroNotReady() then
                         return
                     end
                     local mode = Orb:GetMode()
