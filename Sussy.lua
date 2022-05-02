@@ -1170,7 +1170,7 @@ do
             Menu.q_harass = Menu.q:MenuElement({id = "harass", name = "Harass", value = false})
             Menu.q_killsteal = Menu.q:MenuElement({id = "combo", name = "Killsteal", value = true})
             Menu.q_range =
-                Menu.q:MenuElement({id = "qrange", name = "Q Range", value = 925, min = 25, max = 925, step = 25})
+                Menu.q:MenuElement({id = "qrange", name = "Q Range", value = 1050, min = 25, max = 1122, step = 25})
             Menu.q_hitchance =
                 Menu.q:MenuElement(
                 {id = "hitchance", name = "Hitchance", value = 1, drop = {"Normal", "High", "Immobile"}}
@@ -1180,14 +1180,14 @@ do
             Menu.e:Remove()
             Menu.r:Remove()
 
-            Menu.q_range = Menu.d:MenuElement({id = "qrange", name = "Q Range", value = true})
+            Menu.q_rangedraw = Menu.d:MenuElement({id = "qrangedraw", name = "Q Range", value = true})
 
             local QGGPrediction =
                 GGPrediction:SpellPrediction(
                 {
                     Delay = 0.25,
                     Radius = 90,
-                    Range = 925,
+                    Range = 1122,
                     Speed = 2000,
                     Type = GGPrediction.SPELLTYPE_LINE,
                     Collision = true,
@@ -1243,8 +1243,9 @@ do
             Callback.Add(
                 "Draw",
                 function()
-                    if Menu.q_range:Value() and Spells:IsReady(_Q) then
-                        Draw.Circle(myHero.pos, QGG, Draw.Color(255, 255, 255, 100))
+                    if Menu.q_rangedraw:Value() and Spells:IsReady(_Q) then
+						local range = Menu.q_range:Value()
+                        Draw.Circle(myHero.pos, range, Draw.Color(255, 255, 255, 100))
                     end
                 end
             )
