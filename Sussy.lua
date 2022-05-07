@@ -598,7 +598,7 @@ do
                             Type = GGPrediction.SPELLTYPE_LINE,
                             Collision = true,
                             MaxCollision = 0,
-                            CollisionTypes = {GGPrediction.COLLISION_MINION}
+                            CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
                         }
                     )
                     if Menu.q_killsteal:Value() then
@@ -695,7 +695,7 @@ do
                             Type = GGPrediction.SPELLTYPE_LINE,
                             Collision = true,
                             MaxCollision = 0,
-                            CollisionTypes = {GGPrediction.COLLISION_MINION}
+                            CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
                         }
                     )
                     if
@@ -831,7 +831,7 @@ do
                                             Type = GGPrediction.SPELLTYPE_LINE,
                                             Collision = true,
                                             MaxCollision = 0,
-                                            CollisionTypes = {GGPrediction.COLLISION_MINION}
+                                            CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
                                         }
                                     )
                                     QPrediction:GetPrediction(selected, myHero)
@@ -857,7 +857,7 @@ do
                                                     Type = GGPrediction.SPELLTYPE_LINE,
                                                     Collision = true,
                                                     MaxCollision = 0,
-                                                    CollisionTypes = {GGPrediction.COLLISION_MINION}
+                                                    CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
                                                 }
                                             )
                                             QPrediction:GetPrediction(hero, myHero)
@@ -941,7 +941,7 @@ do
                     Type = GGPrediction.SPELLTYPE_LINE,
                     Collision = true,
                     MaxCollision = 0,
-                    CollisionTypes = {GGPrediction.COLLISION_MINION}
+                    CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
                 }
             )
 
@@ -1086,7 +1086,7 @@ do
                     Type = GGPrediction.SPELLTYPE_LINE,
                     Collision = true,
                     MaxCollision = 0,
-                    CollisionTypes = {GGPrediction.COLLISION_MINION}
+                    CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
                 }
             )
 
@@ -1192,7 +1192,7 @@ do
                     Type = GGPrediction.SPELLTYPE_LINE,
                     Collision = true,
                     MaxCollision = 0,
-                    CollisionTypes = {GGPrediction.COLLISION_MINION}
+                    CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
                 }
             )
 
@@ -1321,7 +1321,7 @@ do
                             Type = GGPrediction.SPELLTYPE_LINE,
                             Collision = true,
                             MaxCollision = 0,
-                            CollisionTypes = {GGPrediction.COLLISION_MINION}
+                            CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
                         }
                     )
                     local EGGPrediction =
