@@ -28,8 +28,18 @@ Callback.Add(
             print("DamageLib not found! Please download it before using this script.")
             return
         end
+        if not FileExist(COMMON_PATH .. "MapPositionGOS.lua") then
+            print("MapPositionGOS not found! Please download it before using this script.")
+            return
+        end
+        if not FileExist(COMMON_PATH .. "2DGeometry.lua") then
+            print("MapPositionGOS not found! Please download it before using this script.")
+            return
+        end
         require("GGPrediction")
         require("DamageLib")
+        require("MapPositionGOS")
+        require("2DGeometry")
         LoadTime = Game.Timer()
         Champion:Init()
     end
@@ -143,6 +153,27 @@ do
     function Spells:IsNotReady(spell)
         if not Spells:IsReady(spell) then
             return true
+        end
+        return false
+    end
+
+    function Spells:CreateLinePoly(pos)
+        local startPos = myHero.pos
+        local endPos = pos
+        local width = 10
+        local c1 = startPos + Vector(Vector(endPos) - startPos):Perpendicular():Normalized() * width
+        local c2 = startPos + Vector(Vector(endPos) - startPos):Perpendicular2():Normalized() * width
+        local c3 = endPos + Vector(Vector(startPos) - endPos):Perpendicular():Normalized() * width
+        local c4 = endPos + Vector(Vector(startPos) - endPos):Perpendicular2():Normalized() * width
+        local poly = Polygon(c1, c2, c3, c4)
+        return poly
+    end
+
+    function Spells:LineCollidesTerrain(linePoly)
+        for i, lineSegment in ipairs(linePoly:__getLineSegments()) do
+            if MapPosition:intersectsWall(lineSegment) then
+                return true
+            end
         end
         return false
     end
@@ -1235,8 +1266,11 @@ do
                                         QGGPrediction.Range = 925
                                         QGGPrediction:GetPrediction(hero, myHero)
                                         if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
-                                            Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
-                                            return
+                                            local QLine = Spells:CreateLinePoly(QGGPrediction.CastPosition)
+                                            if not Spells:LineCollidesTerrain(QLine) then
+                                                Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                                return
+                                            end
                                         end
                                     end
                                 end
@@ -1248,8 +1282,11 @@ do
                             if target then
                                 QGGPrediction:GetPrediction(target, myHero)
                                 if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
-                                    Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
-                                    return
+                                    local QLine = Spells:CreateLinePoly(QGGPrediction.CastPosition)
+                                    if not Spells:LineCollidesTerrain(QLine) then
+                                        Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                        return
+                                    end
                                 end
                             end
                         end
