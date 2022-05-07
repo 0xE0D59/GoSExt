@@ -795,7 +795,7 @@ do
                                 )
                                 RPrediction:GetPrediction(hero, myHero)
                                 if RPrediction:CanHit(Menu.r_hitchance:Value() + 1) then
-                                    NextRTime = Game.Timer() + 0.35
+                                    NextRTime = Game.Timer() + 0.7
                                     Control.CastSpell(HK_R, RPrediction.CastPosition)
                                     return
                                 end
