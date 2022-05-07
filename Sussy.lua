@@ -141,7 +141,9 @@ do
     end
 
     function Spells:IsNotReady(spell)
-        if not Spells:IsReady(spell) then return true end
+        if not Spells:IsReady(spell) then
+            return true
+        end
         return false
     end
 end
@@ -527,9 +529,7 @@ do
                     local behindDmg = 15 + (35 / 17 * (myHero.levelData.lvl - 1)) + myHero.ap * 0.1
                     for i = 1, Game.HeroCount() do
                         local hero = Game.Hero(i)
-                        if
-                            Champion:IsValidEnemy(hero) and myHero.pos:DistanceTo(hero.pos) <= 625
-                         then
+                        if Champion:IsValidEnemy(hero) and myHero.pos:DistanceTo(hero.pos) <= 625 then
                             local health = hero.health + (2 * hero.hpRegen)
                             local extraDamage = 0
                             if Menu.e_ks_backstab:Value() and not _G.SDK.ObjectManager:IsFacing(hero, myHero) then
@@ -598,7 +598,7 @@ do
                             Type = GGPrediction.SPELLTYPE_LINE,
                             Collision = true,
                             MaxCollision = 0,
-                            CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
+                            CollisionTypes = {GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL}
                         }
                     )
                     if Menu.q_killsteal:Value() then
@@ -695,7 +695,7 @@ do
                             Type = GGPrediction.SPELLTYPE_LINE,
                             Collision = true,
                             MaxCollision = 0,
-                            CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
+                            CollisionTypes = {GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL}
                         }
                     )
                     if
@@ -744,6 +744,17 @@ do
                 Menu.r:MenuElement(
                 {id = "rhitchance", name = "Hitchance", value = 1, drop = {"Normal", "High", "Immobile"}}
             )
+            Menu.r_targets = Menu.r:MenuElement({id = "PykeRTargets", name = "Use on: ", type = MENU})
+            DelayAction(
+                function()
+                    for i, target in pairs(Champion:GetEnemies()) do
+                        Menu.r_targets:MenuElement(
+                            {id = "PykeR_" .. target.charName, name = target.charName, value = true}
+                        )
+                    end
+                end,
+                1
+            )
 
             Menu.q_range = Menu.d:MenuElement({id = "qrange", name = "Q Range", value = true})
             Menu.r_range = Menu.d:MenuElement({id = "rrange", name = "R Range", value = false})
@@ -775,12 +786,12 @@ do
                             RDmg = Dmg2
                         end
 
-                        for i = 1, Game.HeroCount() do
-                            local hero = Game.Hero(i)
+                        local validEnemies = Champion:GetValidEnemies(myHero.pos, 900)
+                        for i = 1, #validEnemies do
+                            local hero = validEnemies[i]
                             if
-                                hero and hero.team ~= myHero.team and hero.valid and hero.alive and hero.isTargetable and
-                                    myHero.pos:DistanceTo(hero.pos) <= 900 and
-                                    hero.health <= RDmg
+                                hero and hero.health <= RDmg and Champion:IsValidEnemy(hero) and
+                                    Menu.r_targets["PykeR_" .. hero.charName]:Value()
                              then
                                 local RPrediction =
                                     GGPrediction:SpellPrediction(
@@ -831,7 +842,10 @@ do
                                             Type = GGPrediction.SPELLTYPE_LINE,
                                             Collision = true,
                                             MaxCollision = 0,
-                                            CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
+                                            CollisionTypes = {
+                                                GGPrediction.COLLISION_MINION,
+                                                GGPrediction.COLLISION_YASUOWALL
+                                            }
                                         }
                                     )
                                     QPrediction:GetPrediction(selected, myHero)
@@ -857,7 +871,10 @@ do
                                                     Type = GGPrediction.SPELLTYPE_LINE,
                                                     Collision = true,
                                                     MaxCollision = 0,
-                                                    CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
+                                                    CollisionTypes = {
+                                                        GGPrediction.COLLISION_MINION,
+                                                        GGPrediction.COLLISION_YASUOWALL
+                                                    }
                                                 }
                                             )
                                             QPrediction:GetPrediction(hero, myHero)
@@ -941,7 +958,7 @@ do
                     Type = GGPrediction.SPELLTYPE_LINE,
                     Collision = true,
                     MaxCollision = 0,
-                    CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
+                    CollisionTypes = {GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL}
                 }
             )
 
@@ -1086,7 +1103,7 @@ do
                     Type = GGPrediction.SPELLTYPE_LINE,
                     Collision = true,
                     MaxCollision = 0,
-                    CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
+                    CollisionTypes = {GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL}
                 }
             )
 
@@ -1192,7 +1209,7 @@ do
                     Type = GGPrediction.SPELLTYPE_LINE,
                     Collision = true,
                     MaxCollision = 0,
-                    CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
+                    CollisionTypes = {GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL}
                 }
             )
 
@@ -1244,7 +1261,7 @@ do
                 "Draw",
                 function()
                     if Menu.q_rangedraw:Value() and Spells:IsReady(_Q) then
-						local range = Menu.q_range:Value()
+                        local range = Menu.q_range:Value()
                         Draw.Circle(myHero.pos, range, Draw.Color(255, 255, 255, 100))
                     end
                 end
@@ -1321,7 +1338,7 @@ do
                             Type = GGPrediction.SPELLTYPE_LINE,
                             Collision = true,
                             MaxCollision = 0,
-                            CollisionTypes = { GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL }
+                            CollisionTypes = {GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL}
                         }
                     )
                     local EGGPrediction =
