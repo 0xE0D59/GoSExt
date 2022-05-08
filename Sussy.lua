@@ -433,7 +433,10 @@ do
             Callback.Add(
                 "Tick",
                 function()
-                    if Champion:MyHeroNotReady() then
+                    if
+                        myHero.dead or Game.IsChatOpen() or Orb:IsEvading() or Champion:IsRecalling(myHero) or
+                            Champion:IsPlayerAtFountain(myHero)
+                     then
                         return
                     end
                     local mode = Orb:GetMode()
@@ -796,7 +799,10 @@ do
             Callback.Add(
                 "Tick",
                 function()
-                    if Champion:MyHeroNotReady() then
+                    if
+                        myHero.dead or Game.IsChatOpen() or Orb:IsEvading() or Champion:IsRecalling(myHero) or
+                            Champion:IsPlayerAtFountain(myHero)
+                     then
                         return
                     end
                     if not Spells:IsReady(_Q) then
