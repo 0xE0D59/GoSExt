@@ -1,9 +1,10 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.9
+	version 1.11
 	
 	Changelog:
+	-- 1.11: Added Garen
 	-- 1.10: Added Trundle
 	-- 1.9: Added Dr Mundo
 	-- 1.8: Added Nautilus
@@ -16,7 +17,7 @@
 	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]] --
-local Version = "1.9"
+local Version = "1.11"
 local LoadTime = 0
 Callback.Add(
     "Load",
@@ -1809,5 +1810,40 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Trundle END
+		
+		-- Garen START
+        if myHero.charName == "Garen" then
+            Menu:Init()
+            Menu.w:Remove()
+            Menu.e:Remove()
+            Menu.r:Remove()
+            Menu.d:Remove()
+
+            Menu.q_combo = Menu.q:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.q_harass = Menu.q:MenuElement({id = "harass", name = "Harass", value = false})
+
+            Callback.Add(
+                "Tick",
+                function()
+                end
+            )
+            Orb:OnPostAttack(
+                function()
+                    local mode = Orb:GetMode()
+                    if
+                        Spells:IsReady(_Q) and
+                            ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()))
+                     then
+                        local target = Orb:GetTarget(300)
+                        if target then
+                            Control.CastSpell(HK_Q)
+                        end
+                    end
+                end
+            )
+
+            print("Sussy " .. myHero.charName .. " loaded.")
+        end
+        -- Garen END
     end
 end
