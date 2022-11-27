@@ -1,9 +1,10 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.12
+	version 1.13
 	
 	Changelog:
+	-- 1.13: Added Rammus
 	-- 1.12: Added Teemo
 	-- 1.11: Added Garen
 	-- 1.10: Added Trundle
@@ -18,7 +19,7 @@
 	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]] --
-local Version = "1.12"
+local Version = "1.13"
 local LoadTime = 0
 Callback.Add(
     "Load",
@@ -261,6 +262,14 @@ do
             return _G.SDK.Orbwalker:OnPostAttack(fn)
         elseif _G.PremiumOrbwalker then
             return _G.PremiumOrbwalker:OnPostAttack(fn)
+        end
+    end
+
+    function Orb:OnPreAttack(fn)
+        if _G.SDK then
+            return _G.SDK.Orbwalker:OnPreAttack(fn)
+        elseif _G.PremiumOrbwalker then
+            return _G.PremiumOrbwalker:OnPreAttack(fn)
         end
     end
 end
@@ -1800,7 +1809,7 @@ do
                         Spells:IsReady(_Q) and
                             ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()))
                      then
-                        local target = Orb:GetTarget(300)
+                        local target = Orb:GetTarget(325)
                         if target then
                             Control.CastSpell(HK_Q)
                         end
@@ -1835,7 +1844,7 @@ do
                         Spells:IsReady(_Q) and
                             ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()))
                      then
-                        local target = Orb:GetTarget(300)
+                        local target = Orb:GetTarget(325)
                         if target then
                             Control.CastSpell(HK_Q)
                         end
@@ -1868,9 +1877,9 @@ do
                     local mode = Orb:GetMode()
                     if
                         Spells:IsReady(_Q) and
-                            ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()))
+                            ((Menu.q_combo:Value() and Orb:IsCombo()) or (Menu.q_harass:Value() and Orb:IsHarass()))
                      then
-                        local target = Orb:GetTarget(700)
+                        local target = Orb:GetTarget(725)
                         if target then
                             Control.CastSpell(HK_Q, target)
                         end
@@ -1881,5 +1890,54 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Teemo END
+		
+		-- Rammus START
+        if myHero.charName == "Rammus" then
+            Menu:Init()
+            Menu.q:Remove()
+            Menu.r:Remove()
+
+            Menu.d:Remove()
+
+            Menu.w_combo = Menu.w:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.w_harass = Menu.w:MenuElement({id = "harass", name = "Harass", value = false})
+			
+            Menu.e_combo = Menu.e:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.e_harass = Menu.e:MenuElement({id = "harass", name = "Harass", value = false})
+
+            Callback.Add(
+                "Tick",
+                function()
+					local mode = Orb:GetMode()
+                    if
+                        Spells:IsReady(_E) and
+                            ((Menu.e_combo:Value() and Orb:IsCombo()) or (Menu.e_harass:Value() and Orb:IsHarass()))
+                     then
+                        local target = Orb:GetTarget(250)
+                        if target then
+                            Control.CastSpell(HK_E, target)
+                        end
+                    end
+                end
+            )
+            Orb:OnPreAttack(
+                function()
+                    local mode = Orb:GetMode()
+                    if
+                        Spells:IsReady(_W) and
+                            ((Menu.w_combo:Value() and Orb:IsCombo()) or (Menu.w_harass:Value() and Orb:IsHarass()))
+							 and myHero:GetSpellData(_W).name == "DefensiveBallCurl"
+                     then
+                        local target = Orb:GetTarget(250)
+                        if target then
+                            Control.CastSpell(HK_W)
+                        end
+                    end
+                end
+            )
+
+            print("Sussy " .. myHero.charName .. " loaded.")
+        end
+        -- Rammus END
     end
 end
