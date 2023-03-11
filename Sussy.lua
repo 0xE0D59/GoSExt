@@ -1,9 +1,11 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.13
+	version 1.15
 	
 	Changelog:
+	-- 1.15: Added Zac
+	-- 1.14: Added Jax
 	-- 1.13: Added Rammus
 	-- 1.12: Added Teemo
 	-- 1.11: Added Garen
@@ -19,7 +21,7 @@
 	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]] --
-local Version = "1.13"
+local Version = "1.15"
 local LoadTime = 0
 Callback.Add(
     "Load",
@@ -846,7 +848,7 @@ do
                                     GGPrediction:SpellPrediction(
                                     {
                                         Delay = 0.5,
-                                        Radius = 250,
+                                        Radius = 200,
                                         Range = 750,
                                         Speed = 1000,
                                         Collision = false,
@@ -1683,8 +1685,8 @@ do
                         for i = 1, #validEnemies do
                             local hero = validEnemies[i]
                             if
-                                myHero.pos:DistanceTo(hero.pos) <= ERange and
-                                    Menu.e_targets["ZileanE_" .. hero.charName]:Value()
+                                hero.ms >= 300 and myHero.pos:DistanceTo(hero.pos) <= ERange and
+                                    Menu.e_targets["ZileanE_" .. hero.charName]:Value() 
                              then
                                 Control.CastSpell(HK_E, hero)
                                 NextECast = Game.Timer() + 0.25
@@ -1939,5 +1941,213 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Rammus END
+		
+		-- Jax START
+        if myHero.charName == "Jax" then
+            Menu:Init()
+            Menu.q:Remove()
+            Menu.e:Remove()
+            Menu.r:Remove()
+
+            Menu.d:Remove()
+
+            Menu.w_combo = Menu.w:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.w_harass = Menu.w:MenuElement({id = "harass", name = "Harass", value = false})
+
+            
+            Orb:OnPreAttack(
+                function()
+                    local mode = Orb:GetMode()
+                    if
+                        Spells:IsReady(_W) and
+                            ((Menu.w_combo:Value() and Orb:IsCombo()) or (Menu.w_harass:Value() and Orb:IsHarass()))
+							 
+                     then
+                        local target = Orb:GetTarget(275)
+                        if target then
+                            Control.CastSpell(HK_W)
+                        end
+                    end
+                end
+            )
+
+            print("Sussy " .. myHero.charName .. " loaded.")
+        end
+        -- Jax END
+		
+		-- Zac START
+        if myHero.charName == "Zac" then
+            Menu:Init()
+
+            Menu.q_combo = Menu.q:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.q_harass = Menu.q:MenuElement({id = "harass", name = "Harass", value = true})
+            Menu.q_killsteal = Menu.q:MenuElement({id = "combo", name = "Killsteal", value = true})
+            Menu.q_range =
+                Menu.q:MenuElement({id = "qrange", name = "Q Range", value = 875, min = 25, max = 950, step = 25})
+            Menu.q_hitchance =
+                Menu.q:MenuElement(
+                {id = "hitchance", name = "Hitchance", value = 2, drop = {"Normal", "High", "Immobile"}}
+            )
+			
+			Menu.w_combo = Menu.w:MenuElement({id = 'combo', name = 'Combo', value = true})			
+			Menu.w_harass = Menu.w:MenuElement({id = 'harass', name = 'Harass', value = true})			
+			Menu.w_waveclear = Menu.w:MenuElement({id = 'clear', name = 'Clear', value = true})
+			Menu.w_jungle = Menu.w:MenuElement({id = 'clear', name = 'Jungle', value = true})
+			Menu.e:Remove()
+			
+			Menu.r_combo = Menu.r:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.r_combo_targets =
+                Menu.r:MenuElement(
+                {id = "combotargets", name = "Combo Min Targets", value = 2, min = 1, max = 5, step = 1}
+            )
+            Menu.r_comborange =
+                Menu.r:MenuElement({id = "rcomborange", name = "R Combo Range", value = 325, min = 25, max = 450, step = 25})
+            Menu.r_auto = Menu.r:MenuElement({id = "auto", name = "Auto", value = true})
+            Menu.r_auto_targets =
+                Menu.r:MenuElement(
+                {id = "Auto min targets", name = "Auto Min Targets", value = 3, min = 1, max = 5, step = 1})				
+            Menu.r_autorange =
+                Menu.r:MenuElement({id = "rautorange", name = "R Auto Range", value = 325, min = 25, max = 450, step = 25})
+            
+			
+            Menu.q_rangedraw = Menu.d:MenuElement({id = "qrangedraw", name = "Q Range", value = true})
+            Menu.w_rangedraw = Menu.d:MenuElement({id = "wrangedraw", name = "W Range", value = false})
+            Menu.e_rangedraw = Menu.d:MenuElement({id = "erangedraw", name = "E Range", value = true})
+            Menu.r_rangedraw = Menu.d:MenuElement({id = "rrangedraw", name = "R Range", value = false})
+		
+			local QGGPrediction =
+							GGPrediction:SpellPrediction(
+							{
+								Delay = 0.25,
+								Radius = 80,
+								Range = 950,
+								Speed = 2800,
+								Type = GGPrediction.SPELLTYPE_LINE,
+								Collision = true,
+								MaxCollision = 0,
+								CollisionTypes = {GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL}
+							})
+			local ERanges = { 1200, 1350, 1500, 1650, 1800}
+			
+            Callback.Add(
+                "Tick",
+                function()
+                    if Champion:MyHeroNotReady() then
+                        return
+                    end
+                    local mode = Orb:GetMode()
+					
+					if Spells:IsReady(_R) then
+                        if ((mode == "Combo" and Menu.r_combo:Value()) or Menu.r_auto:Value()) then
+                            local count = 0
+							local range = Menu.r_comborange:Value()
+                            local minTargets = Menu.r_auto_targets:Value()
+                            if mode == "Combo" and Menu.r_combo:Value() then
+                                minTargets = Menu.r_combo_targets:Value()
+								range = Menu.r_autorange:Value()
+                            end
+                            for i = 1, Game.HeroCount() do
+                                local hero = Game.Hero(i)
+                                if
+                                    hero and hero.team ~= myHero.team and hero.valid and hero.alive and
+                                        myHero.pos:DistanceTo(hero.pos) <= range
+                                 then
+                                    count = count + 1
+                                end
+                            end
+                            if count >= minTargets then
+                                Control.CastSpell(HK_R)
+                                return
+                            end
+                        end
+                    end
+					
+					if Spells:IsReady(_W) then
+                        if (mode == "Combo" and Menu.w_combo:Value()) or (mode == "Harass" and Menu.w_harass:Value()) then
+                            local target = Orb:GetTarget(350)
+                            if target then
+                                Control.CastSpell(HK_W)
+                                return
+                            end
+                        end
+
+                        if mode == "Clear" and (Menu.w_jungle:Value() or Menu.w_waveclear:Value()) then
+                            for i = 1, Game.MinionCount() do
+                                local minion = Game.Minion(i)
+                                if
+                                    ((Menu.w_jungle:Value() and minion.team == 300) or
+                                        (Menu.w_waveclear:Value() and minion.team == 300 - myHero.team)) and
+                                        minion.valid and
+                                        minion.alive and
+                                        minion.pos:DistanceTo(myHero.pos) <= 350
+                                 then
+                                    Control.CastSpell(HK_W)
+                                    return
+                                end
+                            end
+                        end
+                    end
+
+                    if Spells:IsReady(_Q) then
+                        if Menu.q_killsteal:Value() then
+                            local count = 0
+                            for i = 1, Game.HeroCount() do
+                                local hero = Game.Hero(i)
+                                if
+                                    hero and hero.team ~= myHero.team and hero.valid and hero.alive and
+                                        myHero.pos:DistanceTo(hero.pos) <= (QGGPrediction.Range + 100)
+                                 then
+                                    local qdamage = getdmg("Q", hero, myHero)
+                                    if qdamage >= hero.health + (2 * hero.hpRegen) then
+                                        QGGPrediction.Range = 945
+                                        QGGPrediction:GetPrediction(hero, myHero)
+                                        if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+                                            Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                            return
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        if (mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()) then
+                            QGGPrediction.Range = Menu.q_range:Value()
+                            local target = Orb:GetTarget(QGGPrediction.Range + 50)
+                            if target then
+                                QGGPrediction:GetPrediction(target, myHero)
+                                if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+                                    Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                    return
+                                end
+                            end
+                        end
+                    end
+
+                    
+                end
+            )
+			
+			Callback.Add(
+                "Draw",
+                function()
+                    if Menu.q_rangedraw:Value() and Spells:IsReady(_Q) then
+                        Draw.Circle(myHero.pos, Menu.q_range:Value(), Draw.Color(200, 255, 0, 0))
+                    end
+					if Menu.w_rangedraw:Value() and Spells:IsReady(_W) then
+                        Draw.Circle(myHero.pos, 350, Draw.Color(200, 0, 255, 0))
+                    end
+					if Menu.e_rangedraw:Value() and Spells:IsReady(_E) then
+						
+						local erange = ERanges[myHero:GetSpellData(_E).level]
+                        Draw.Circle(myHero.pos, erange, Draw.Color(200, 0, 0, 255))
+                    end
+                    if Menu.r_rangedraw:Value() and Spells:IsReady(_R) then
+                        Draw.Circle(myHero.pos, 300, Draw.Color(200, 255, 255, 255))
+                    end
+                end
+            )
+
+            print("Sussy " .. myHero.charName .. " loaded.")
+        end
+        -- Zac END
     end
 end
