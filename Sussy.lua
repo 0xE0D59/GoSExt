@@ -431,6 +431,7 @@ do
             Menu.d:Remove()
             Menu.q_combo = Menu.q:MenuElement({id = "combo", name = "Combo", value = true})
             Menu.q_harass = Menu.q:MenuElement({id = "harass", name = "Harass", value = false})
+            Menu.q_auto = Menu.q:MenuElement({id = "auto", name = "Auto-release", value = false})
             Menu.q_charge =
                 Menu.q:MenuElement(
                 {id = "qcharge", name = "Min charge time", value = 0, min = 0, max = 1.25, step = 0.05}
@@ -448,6 +449,7 @@ do
                 Menu.r:MenuElement({id = "dist", name = "Min distance", value = 400, min = 0, max = 800, step = 25})
 
             local QStartTime = 0
+			local NextQStart = Game.Timer()
 
             Callback.Add(
                 "Tick",
@@ -486,7 +488,7 @@ do
                         end
                     end
 
-                    if (mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()) then
+                    if (Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()) or Menu.q_auto:Value() then
                         local target = Orb:GetTarget(1500)
                         if target == nil then
                             return
@@ -502,6 +504,7 @@ do
                             if QStartTime == 0 then
                                 QStartTime = Game.Timer()
                             end
+							print(Game.Timer())
                             local QChargeTime = Game.Timer() - QStartTime
                             if QChargeTime >= (Menu.q_charge:Value() - 0.2) then
                                 local QRange = math.max(250 + (math.min(QChargeTime, 1.25) * 46.5 / 0.125), 250)
@@ -521,23 +524,30 @@ do
                                     Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
                                     return
                                 end
-                                if QChargeTime > 4.35 and Menu.q_release:Value() then
+                                if QChargeTime > 3.8 and Menu.q_release:Value() then
                                     Control.CastSpell(HK_Q, target.pos)
                                 end
                             end
-                        elseif Spells:IsReady(_Q) and myHero.pos:DistanceTo(target.pos) <= 850 then
-                            Control.KeyDown(HK_Q)
-                            return
+                        elseif (Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()) and 
+						Spells:IsReady(_Q) and myHero.pos:DistanceTo(target.pos) <= 850 then
+							if NextQStart > Game.Timer() then
+								return
+							end
+							if Control.IsKeyDown(HK_Q) then
+								Control.KeyUp(HK_Q)
+							else
+								Control.KeyDown(HK_Q)
+							end
+							NextQStart = Game.Timer() + 0.25
                         end
                     end
                 end
             )
             Orb:OnPostAttack(
                 function()
-                    local mode = Orb:GetMode()
                     if
                         Spells:IsReady(_E) and
-                            ((mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value()))
+                            ((Orb:IsCombo() and Menu.e_combo:Value()) or (Orb:IsHarass() and Menu.e_harass:Value()))
                      then
                         local target = Orb:GetTarget(300)
                         if target then
