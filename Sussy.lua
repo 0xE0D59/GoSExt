@@ -2003,7 +2003,7 @@ do
             Menu.w_harass = Menu.w:MenuElement({id = "harass", name = "Harass", value = false})
 
             
-            Orb:OnPreAttack(
+            Orb:OnPostAttack(
                 function()
                     local mode = Orb:GetMode()
                     if
@@ -2011,7 +2011,7 @@ do
                             ((Menu.w_combo:Value() and Orb:IsCombo()) or (Menu.w_harass:Value() and Orb:IsHarass()))
 							 
                      then
-                        local target = Orb:GetTarget(275)
+                        local target = Orb:GetTarget(300)
                         if target then
                             Control.CastSpell(HK_W)
                         end
