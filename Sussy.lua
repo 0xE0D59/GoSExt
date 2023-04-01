@@ -4,6 +4,7 @@
 	version 1.15
 	
 	Changelog:
+	-- 1.16: Added Darius, Garen R KS
 	-- 1.15: Added Zac
 	-- 1.14: Added Jax
 	-- 1.13: Added Rammus
@@ -21,7 +22,7 @@
 	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]] --
-local Version = "1.15"
+local Version = "1.16"
 local LoadTime = 0
 Callback.Add(
     "Load",
@@ -258,6 +259,10 @@ do
         end
         return false
     end
+	
+	function Orb:IsImmortal(target, isAttack)
+		return _G.SDK.ObjectManager:IsHeroImmortal(target, isAttack)
+	end
 
     function Orb:OnPostAttack(fn)
         if _G.SDK then
@@ -1828,28 +1833,71 @@ do
             Menu:Init()
             Menu.w:Remove()
             Menu.e:Remove()
-            Menu.r:Remove()
-            Menu.d:Remove()
 
             Menu.q_combo = Menu.q:MenuElement({id = "combo", name = "Combo", value = true})
             Menu.q_harass = Menu.q:MenuElement({id = "harass", name = "Harass", value = false})
+			Menu.r_killsteal = Menu.r:MenuElement({id = "killsteal", name = "Killsteal", value = true})			
+			local targetsLoaded = false
+            DelayAction(
+                function()
+					Menu.r_targets = Menu.r:MenuElement({id = "garenrtargets", name = "Use on: ", type = MENU})
+                    for i, target in pairs(Champion:GetEnemies()) do
+                        Menu.r_targets:MenuElement(
+                            {id = "GarenR_" .. target.charName, name = target.charName, value = true}
+                        )
+                    end
+					targetsLoaded = true
+                end,
+                1
+            )
+			Menu.r_rangedraw = Menu.d:MenuElement({id = "rrangedraw", name = "R Range", value = false})
+			
+            local NextRTime = 0.0
 
             Callback.Add(
                 "Tick",
                 function()
-                end
-            )
+					if targetsLoaded and Menu.r_killsteal:Value() and Spells:IsReady(_R) and Game.Timer() > NextRTime then
+						local count = 0
+						for i = 1, Game.HeroCount() do
+							local hero = Game.Hero(i)
+							if
+								hero and hero.team ~= myHero.team and Menu.r_targets["GarenR_" .. hero.charName]:Value() and hero.valid and hero.alive and
+									myHero.pos:DistanceTo(hero.pos) <= 425
+							 then
+								local rlevel = myHero:GetSpellData(_R).level
+								local rdamage = ({150, 300, 450})[rlevel] + (({25, 30, 35})[rlevel] / 100) * (hero.maxHealth - hero.health)
+								if rdamage > hero.health + (2 * hero.hpRegen) and not Orb:IsImmortal(hero, false) then
+									print("Casting R on "..hero.name.." - health: "..string.format("%.0f", hero.health).." damage: "..string.format("%.0f", rdamage))
+									Control.CastSpell(HK_R, hero)
+									NextRTime = Game.Timer() + 0.5
+									return
+								end
+							end
+						end
+					end
+				end
+				)
             Orb:OnPostAttack(
                 function()
-                    local mode = Orb:GetMode()
                     if
                         Spells:IsReady(_Q) and
-                            ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()))
+                            ((Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()))
                      then
                         local target = Orb:GetTarget(325)
                         if target then
                             Control.CastSpell(HK_Q)
                         end
+                    end
+                end
+            )
+			
+			Callback.Add(
+                "Draw",
+                function()
+                    local RRange = 400
+                    if Menu.r_rangedraw:Value() and Spells:IsReady(_R) then
+                        Draw.Circle(myHero.pos, RRange, Draw.Color(200, 255, 255, 255))
                     end
                 end
             )
@@ -2149,5 +2197,105 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Zac END
+		
+		-- Darius START
+        if myHero.charName == "Darius" then
+            Menu:Init()
+            Menu.q:Remove()
+
+            Menu.w_combo = Menu.w:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.w_harass = Menu.w:MenuElement({id = "harass", name = "Harass", value = false})
+            Menu.e_combo = Menu.e:MenuElement({id = "ecombo", name = "Combo", value = true})
+            Menu.e_harass = Menu.e:MenuElement({id = "eharass", name = "Harass", value = false})
+			Menu.r_killsteal = Menu.r:MenuElement({id = "killsteal", name = "Killsteal", value = true})
+			local targetsLoaded = false
+            DelayAction(
+                function()
+					Menu.r_targets = Menu.r:MenuElement({id = "dariusrtargets", name = "Use on: ", type = MENU})
+                    for i, target in pairs(Champion:GetEnemies()) do
+                        Menu.r_targets:MenuElement(
+                            {id = "DariusR_" .. target.charName, name = target.charName, value = true}
+                        )
+                    end
+					targetsLoaded = true
+                end,
+                1
+            )
+			Menu.e_rangedraw = Menu.d:MenuElement({id = "erangedraw", name = "E Range", value = false})
+			Menu.r_rangedraw = Menu.d:MenuElement({id = "rrangedraw", name = "R Range", value = false})
+			
+            local NextRTime = 0.0
+
+            Callback.Add(
+                "Tick",
+                function()
+					if targetsLoaded and Menu.r_killsteal:Value() and Spells:IsReady(_R) and Game.Timer() > NextRTime then
+						local count = 0
+						for i = 1, Game.HeroCount() do
+							local hero = Game.Hero(i)
+							if
+								hero and hero.team ~= myHero.team and Menu.r_targets["DariusR_" .. hero.charName]:Value() and hero.valid and hero.alive and
+									myHero.pos:DistanceTo(hero.pos) <= 500
+							 then
+								local rlevel = myHero:GetSpellData(_R).level
+								local rstacks = 0
+								local bleedbuff = _G.SDK.BuffManager:GetBuff(hero, "DariusHemo")
+								if bleedbuff and bleedbuff.count > 0 and bleedbuff.duration > 0 then
+									rstacks = bleedbuff.count
+								end
+								local rdamage = (({125, 250, 375})[rlevel] + myHero.bonusDamage * 0.75) * (1 + 0.2 * rstacks)
+								if rdamage > hero.health and not Orb:IsImmortal(hero, false) then
+									print("Casting R on "..hero.name.." - health: "..string.format("%.0f", hero.health).." damage: "..string.format("%.0f", rdamage).." stacks: "..rstacks)
+									Control.CastSpell(HK_R, hero)
+									NextRTime = Game.Timer() + 0.5
+									return
+								end
+							end
+						end
+					end
+					
+					if Spells:IsReady(_E) and ((Orb:IsCombo() and Menu.e_combo:Value()) or (Orb:IsHarass() and Menu.e_harass:Value())) then
+                        local target = Orb:GetTarget(535)
+						if target then
+							local distanceToTarget = myHero.pos:DistanceTo(target.pos)
+							if distanceToTarget <= 535 and distanceToTarget >= 325 then
+								Control.CastSpell(HK_E, target)
+								return
+							end							
+						end
+					end
+				end
+				)
+            Orb:OnPostAttack(
+                function()
+                    if
+                        Spells:IsReady(_W) and
+                            ((Orb:IsCombo() and Menu.w_combo:Value()) or (Orb:IsHarass() and Menu.w_harass:Value()))
+                     then
+                        local target = Orb:GetTarget(325)
+                        if target then
+                            Control.CastSpell(HK_W)
+                        end
+                    end
+                end
+            )
+			
+			Callback.Add(
+                "Draw",
+                function()
+                    local ERange = 475
+                    local RRange = 475
+                    if Menu.e_rangedraw:Value() and Spells:IsReady(_E) then
+                        Draw.Circle(myHero.pos, RRange, Draw.Color(200, 255, 0, 0))
+                    end
+                    if Menu.r_rangedraw:Value() and Spells:IsReady(_R) then
+                        Draw.Circle(myHero.pos, RRange, Draw.Color(200, 255, 255, 255))
+                    end
+                end
+            )
+
+            print("Sussy " .. myHero.charName .. " loaded.")
+        end
+        -- Darius END
     end
 end
