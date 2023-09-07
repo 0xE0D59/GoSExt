@@ -24,6 +24,10 @@
 ]] --
 local Version = "1.16"
 local LoadTime = 0
+require("GGPrediction")
+require("DamageLib")
+require("MapPositionGOS")
+require("2DGeometry")
 Callback.Add(
     "Load",
     function()
@@ -43,10 +47,6 @@ Callback.Add(
             print("MapPositionGOS not found! Please download it before using this script.")
             return
         end
-        require("GGPrediction")
-        require("DamageLib")
-        require("MapPositionGOS")
-        require("2DGeometry")
         LoadTime = Game.Timer()
         Champion:Init()
     end
@@ -504,7 +504,6 @@ do
                             if QStartTime == 0 then
                                 QStartTime = Game.Timer()
                             end
-							print(Game.Timer())
                             local QChargeTime = Game.Timer() - QStartTime
                             if QChargeTime >= (Menu.q_charge:Value() - 0.2) then
                                 local QRange = math.max(250 + (math.min(QChargeTime, 1.25) * 46.5 / 0.125), 250)
