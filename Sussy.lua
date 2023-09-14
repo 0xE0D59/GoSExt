@@ -610,7 +610,7 @@ do
                                 end
                                 if
                                     ((health - dmg) / hero.maxHealth) <= 0.05 and Menu.e_ks_collector:Value() and
-                                        _G.SDK.ItemManager:HasItem(unit, 6676)
+                                        _G.SDK.ItemManager:HasItem(myHero, 6676)
                                  then
                                     Control.CastSpell(HK_E, hero)
                                 end
