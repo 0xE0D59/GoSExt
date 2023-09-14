@@ -1,9 +1,10 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.15
+	version 1.17
 	
 	Changelog:
+	-- 1.17: Added Rumble
 	-- 1.16: Added Darius, Garen R KS
 	-- 1.15: Added Zac
 	-- 1.14: Added Jax
@@ -22,7 +23,7 @@
 	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]] --
-local Version = "1.16"
+local Version = "1.17"
 local LoadTime = 0
 require("GGPrediction")
 require("DamageLib")
@@ -2306,5 +2307,96 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Darius END
+		
+		-- Rumble START
+        if myHero.charName == "Rumble" then
+            Menu:Init()
+
+            Menu.e_combo = Menu.e:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.e_harass = Menu.e:MenuElement({id = "harass", name = "Harass", value = false})
+            Menu.e_killsteal = Menu.e:MenuElement({id = "combo", name = "Killsteal", value = true})
+            Menu.e_range =
+                Menu.e:MenuElement({id = "erange", name = "E Range", value = 925, min = 25, max = 950, step = 25})
+            Menu.e_hitchance =
+                Menu.e:MenuElement(
+                {id = "hitchance", name = "Hitchance", value = 1, drop = {"Normal", "High", "Immobile"}}
+            )
+			
+            Menu.q:Remove()
+            Menu.w:Remove()
+            Menu.r:Remove()
+
+            Menu.e_rangedraw = Menu.d:MenuElement({id = "erangedraw", name = "E Range", value = true})
+
+            local EGGPrediction =
+                GGPrediction:SpellPrediction(
+                {
+                    Delay = 0.25,
+                    Radius = 60,
+                    Range = 925,
+                    Speed = 2000,
+                    Type = GGPrediction.SPELLTYPE_LINE,
+                    Collision = true,
+                    MaxCollision = 0,
+                    CollisionTypes = {GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL}
+                }
+            )
+
+            Callback.Add(
+                "Tick",
+                function()
+                    if Champion:MyHeroNotReady() then
+                        return
+                    end
+                    local mode = Orb:GetMode()
+
+                    if Spells:IsReady(_E) then
+                        if Menu.e_killsteal:Value() then
+                            local count = 0
+                            for i = 1, Game.HeroCount() do
+                                local hero = Game.Hero(i)
+                                if
+                                    hero and hero.team ~= myHero.team and hero.valid and hero.alive and
+                                        myHero.pos:DistanceTo(hero.pos) <= 950
+                                 then
+                                    local edamage = getdmg("E", hero, myHero)
+                                    if edamage > hero.health + (2 * hero.hpRegen) and not Orb:IsImmortal(hero, false) then
+                                        EGGPrediction.Range = Menu.e_range:Value()
+                                        EGGPrediction:GetPrediction(hero, myHero)
+                                        if EGGPrediction:CanHit(Menu.e_hitchance:Value() + 1) then
+                                            Control.CastSpell(HK_E, EGGPrediction.CastPosition)
+                                            return
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        if (mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()) then
+                            EGGPrediction.Range = Menu.e_range:Value()
+                            local target = Orb:GetTarget(EGGPrediction.Range)
+                            if target then
+                                EGGPrediction:GetPrediction(target, myHero)
+                                if EGGPrediction:CanHit(Menu.e_hitchance:Value() + 1) then
+                                    Control.CastSpell(HK_E, EGGPrediction.CastPosition)
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end
+            )
+
+            Callback.Add(
+                "Draw",
+                function()
+                    if Menu.e_rangedraw:Value() and Spells:IsReady(_E) then
+                        Draw.Circle(myHero.pos, Menu.e_range:Value(), Draw.Color(255, 255, 255, 100))
+                    end
+                end
+            )
+
+            print("Sussy " .. myHero.charName .. " loaded.")
+        end
+        -- Rumble END
     end
 end
