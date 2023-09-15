@@ -1,9 +1,10 @@
 --[[
 	Sussy AIO: champion script for Gaming On Steroids
 	
-	version 1.17
+	version 1.18
 	
 	Changelog:
+	-- 1.18: Added Kennen
 	-- 1.17: Added Rumble
 	-- 1.16: Added Darius, Garen R KS
 	-- 1.15: Added Zac
@@ -23,7 +24,7 @@
 	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]] --
-local Version = "1.17"
+local Version = "1.18"
 local LoadTime = 0
 require("GGPrediction")
 require("DamageLib")
@@ -2391,6 +2392,97 @@ do
                 function()
                     if Menu.e_rangedraw:Value() and Spells:IsReady(_E) then
                         Draw.Circle(myHero.pos, Menu.e_range:Value(), Draw.Color(255, 255, 255, 100))
+                    end
+                end
+            )
+
+            print("Sussy " .. myHero.charName .. " loaded.")
+        end
+        -- Rumble END
+		
+		-- Kennen START
+        if myHero.charName == "Kennen" then
+            Menu:Init()
+
+            Menu.q_combo = Menu.q:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.q_harass = Menu.q:MenuElement({id = "harass", name = "Harass", value = false})
+            Menu.q_killsteal = Menu.q:MenuElement({id = "combo", name = "Killsteal", value = true})
+            Menu.q_range =
+                Menu.q:MenuElement({id = "qrange", name = "Q Range", value = 975, min = 25, max = 1050, step = 25})
+            Menu.q_hitchance =
+                Menu.q:MenuElement(
+                {id = "hitchance", name = "Hitchance", value = 1, drop = {"Normal", "High", "Immobile"}}
+            )
+			
+            Menu.w:Remove()
+            Menu.e:Remove()
+            Menu.r:Remove()
+
+            Menu.q_rangedraw = Menu.d:MenuElement({id = "qrangedraw", name = "Q Range", value = true})
+
+            local QGGPrediction =
+                GGPrediction:SpellPrediction(
+                {
+                    Delay = 0.25,
+                    Radius = 50,
+                    Range = 1050,
+                    Speed = 1700,
+                    Type = GGPrediction.SPELLTYPq_LINE,
+                    Collision = true,
+                    MaxCollision = 0,
+                    CollisionTypes = {GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL}
+                }
+            )
+
+            Callback.Add(
+                "Tick",
+                function()
+                    if Champion:MyHeroNotReady() then
+                        return
+                    end
+                    local mode = Orb:GetMode()
+
+                    if Spells:IsReady(_Q) then
+                        if Menu.q_killsteal:Value() then
+                            local count = 0
+                            for i = 1, Game.HeroCount() do
+                                local hero = Game.Hero(i)
+                                if
+                                    hero and hero.team ~= myHero.team and hero.valid and hero.alive and
+                                        myHero.pos:DistanceTo(hero.pos) <= 1050
+                                 then
+                                    local qdamage = getdmg("Q", hero, myHero)
+                                    if qdamage > hero.health + (2 * hero.hpRegen) and not Orb:IsImmortal(hero, false) then
+                                        QGGPrediction.Range = Menu.q_range:Value()
+                                        QGGPrediction:GetPrediction(hero, myHero)
+                                        if EGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+                                            Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                            return
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        if (mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()) then
+                            QGGPrediction.Range = Menu.q_range:Value()
+                            local target = Orb:GetTarget(QGGPrediction.Range)
+                            if target then
+                                QGGPrediction:GetPrediction(target, myHero)
+                                if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+                                    Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end
+            )
+
+            Callback.Add(
+                "Draw",
+                function()
+                    if Menu.q_rangedraw:Value() and Spells:IsReady(_Q) then
+                        Draw.Circle(myHero.pos, Menu.q_range:Value(), Draw.Color(255, 255, 255, 100))
                     end
                 end
             )
