@@ -42,9 +42,9 @@ end
 
 do
 	Menu = {}
-	Menu = MenuElement({name = "Sussy Utils", id = 'Sussy ' .. myHero.charName, type = _G.MENU, leftIcon = "/SussyUtils.png"})
+	Menu = MenuElement({name = "Sussy Utils", id = 'SussyUtils', type = _G.MENU, leftIcon = "/SussyUtils.png"})
 		
-	Menu.potter = Menu:MenuElement({name = 'Potions', id = 'potter', type = _G.MENU})
+	Menu.potter = Menu:MenuElement({name = 'Potions', id = 'su.potter', type = _G.MENU})
 	Menu.potter_enabled = Menu.potter:MenuElement({id = "enabled", name = "Enabled", value = true})
     Menu.potter_regular = Menu.potter:MenuElement({id = "regular", name = "Health Potions", value = true, leftIcon = "https://ddragon.leagueoflegends.com/cdn/10.23.1/img/item/2003.png"})
     Menu.potter_cookies = Menu.potter:MenuElement({id = "cookies", name = "Biscuit", value = true, leftIcon = "https://ddragon.leagueoflegends.com/cdn/10.23.1/img/item/2010.png"})
@@ -73,8 +73,8 @@ do
 			for i = 1, Game.HeroCount() do 
 				local hero = Game.Hero(i)
 				local zhonyaBuff = nil
-				for i = 0, myHero.buffCount do
-					local buff = myHero:GetBuff(i)
+				for i = 0, hero.buffCount do
+					local buff = hero:GetBuff(i)
 					if buff.type == 18 and buff.duration > 0 then
 						zhonyaBuff = buff
 					end
@@ -96,7 +96,7 @@ do
 			for i = 1, Game.HeroCount() do 
 				local hero = Game.Hero(i)
 				if (hero.team == myHero.team and Menu.zhonya_allies:Value() and hero ~= myHero) or (hero.team ~= myHero.team and Menu.zhonya_enemies:Value()) or (hero == myHero and Menu.zhonya_player:Value()) then
-					local zhonya = ZhonyaTimers.ActiveZhonyas[myHero.name]
+					local zhonya = ZhonyaTimers.ActiveZhonyas[hero.name]
 					if zhonya then
 						local t = zhonya.Remaining / zhonya.Duration
 						local outerSize = Menu.zhonya_size_inner:Value() * (1 - t) + Menu.zhonya_size_outer:Value() * t
