@@ -1,13 +1,14 @@
 --[[
 	Sussy Utils: utility script for Gaming On Steroids
 	
-	version 1.1
+	version 1.2
 	
 	Changelog:
+	-- 1.2: Added Profane Hydra usage
 	-- 1.1: Added potion handling
 	-- 1.0:	Initial release (Zhonya timers)
 ]]--
-local Version = "1.1"
+local Version = "1.2"
 
 File = {}
 do
@@ -62,8 +63,42 @@ do
 	Menu.zhonya_size_outer = Menu.zhonya:MenuElement({id = 'sizeOuter', name = 'Outer Radius', value = 400, min = 5, max = 600, step = 5})
 	Menu.col_outer = Menu.zhonya:MenuElement({id = 'col', name = 'Outer Color', color = Draw.Color(250, 250, 210, 85)})
 	
+	Menu.items = Menu:MenuElement({name = 'Items', id = 'items', type = _G.MENU})
+	Menu.items_profane = Menu.items:MenuElement({name = 'Profane Hydra', id = 'profane', type = _G.MENU})
+	Menu.items_profaneuse = Menu.items_profane:MenuElement({name = 'Use Profane Hydra', id = 'profaneuse', value = true})
+	Menu.items_profaneusecombo = Menu.items_profane:MenuElement({name = 'Only in combo', id = 'profaneusecombo', value = true})
+	Menu.items_profaneusebelow = Menu.items_profane:MenuElement({name = 'Only if target below 50% HP', id = 'profaneusebelow', value = true})
+	Menu.items_profaneblacklist = Menu.items_profane:MenuElement({name = 'Blacklist', id = 'profaneblacklist', type = _G.MENU})
+	Menu.items_profaneblock = Menu.items_profane:MenuElement({name = 'Block if spell ready', id = 'profaneblock', type = _G.MENU})
+	Menu.items_profaneblockq = Menu.items_profaneblock:MenuElement({name = 'Block if Q ready', id = 'profaneblockq', value = false})
+	Menu.items_profaneblockw = Menu.items_profaneblock:MenuElement({name = 'Block if W ready', id = 'profaneblockw', value = false})
+	Menu.items_profaneblocke = Menu.items_profaneblock:MenuElement({name = 'Block if E ready', id = 'profaneblocke', value = false})
+	Menu.items_profaneblockr = Menu.items_profaneblock:MenuElement({name = 'Block if R ready', id = 'profaneblockr', value = false})
+	
 	Menu:MenuElement({name = '', type = _G.SPACE, id = 'VersionSpacer'})
 	Menu:MenuElement({name = 'Version  ' .. Version, type = _G.SPACE, id = 'VersionNumber'})
+	
+	function GetEnemies()
+        local enemies = {}
+        for i = 1, Game.HeroCount() do
+            local hero = Game.Hero(i)
+            if hero and hero.team ~= myHero.team then
+                table.insert(enemies, hero)
+            end
+        end
+        return enemies
+    end
+	
+	DelayAction(
+                function()
+                    for i, target in pairs(GetEnemies()) do
+                        Menu.items_profaneblacklist:MenuElement(
+                            {id = "profaneblacklist_" .. target.charName, name = target.charName, value = false}
+                        )
+                    end
+                end,
+                1
+            )
 	
 	ZhonyaTimers = {}
 	do
@@ -174,9 +209,74 @@ do
 		end
 	end
 	
+	Items = {}
+	Items.NextTick = 0
+	Items.ProfaneHydraID = 6698
+	Items.ItemHotKey = {[ITEM_1] = HK_ITEM_1, [ITEM_2] = HK_ITEM_2,[ITEM_3] = HK_ITEM_3, [ITEM_4] = HK_ITEM_4, [ITEM_5] = HK_ITEM_5, [ITEM_6] = HK_ITEM_6,}
+	function Items:GetMode()
+        if _G.SDK then
+            return _G.SDK.Orbwalker.Modes[_G.SDK.ORBWALKER_MODE_COMBO] and "Combo" or
+                _G.SDK.Orbwalker.Modes[_G.SDK.ORBWALKER_MODE_HARASS] and "Harass" or
+                _G.SDK.Orbwalker.Modes[_G.SDK.ORBWALKER_MODE_LANECLEAR] and "Clear" or
+                _G.SDK.Orbwalker.Modes[_G.SDK.ORBWALKER_MODE_JUNGLECLEAR] and "Clear" or
+                _G.SDK.Orbwalker.Modes[_G.SDK.ORBWALKER_MODE_LASTHIT] and "LastHit" or
+                _G.SDK.Orbwalker.Modes[_G.SDK.ORBWALKER_MODE_FLEE] and "Flee" or
+                nil
+        elseif _G.PremiumOrbwalker then
+            return _G.PremiumOrbwalker:GetMode()
+        end
+        return nil
+    end
+    function Items:IsCombo()
+        if Items:GetMode() == "Combo" then
+            return true
+        end
+        return false
+    end
+	function Items:GetItemSlot(unit, id)
+		for i = ITEM_1, ITEM_7 do
+			if unit:GetItemData(i).itemID == id then
+				return i
+			end
+		end
+		return 0
+	end
+	function Items:IsSpellReady(spell)
+        return myHero:GetSpellData(spell).currentCd == 0 and myHero:GetSpellData(spell).level > 0 and
+            myHero:GetSpellData(spell).mana <= myHero.mana and
+            Game.CanUseSpell(spell) == 0
+    end
+	Items.Tick = function()
+		if not Menu.items_profaneuse:Value() or Items.NextTick > Game.Timer() or myHero.dead or Game.IsChatOpen() then Items.NextTick = Game.Timer() + 0.025 return end
+		if Menu.items_profaneusecombo:Value() and not Items:IsCombo() then Items.NextTick = Game.Timer() + 0.025 return end
+		if not _G.SDK.ItemManager:IsReady(myHero, Items.ProfaneHydraID) then Items.NextTick = Game.Timer() + 0.05 return end
+		if Menu.items_profaneblockq:Value() and Items:IsSpellReady(_Q) then Items.NextTick = Game.Timer() + 0.05 return end
+		if Menu.items_profaneblockw:Value() and Items:IsSpellReady(_W) then Items.NextTick = Game.Timer() + 0.05 return end
+		if Menu.items_profaneblocke:Value() and Items:IsSpellReady(_E) then Items.NextTick = Game.Timer() + 0.05 return end
+		if Menu.items_profaneblockr:Value() and Items:IsSpellReady(_R) then Items.NextTick = Game.Timer() + 0.05 return end
+		for i = 1, Game.HeroCount() do 
+				local hero = Game.Hero(i)
+				if (hero.team ~= myHero.team) and not Menu.items_profaneblacklist["profaneblacklist_" .. hero.charName]:Value() and hero.valid and hero.isTargetable and hero.alive and hero.visible and hero.networkID and
+                myHero.pos:DistanceTo(hero.pos) <= 425 and hero.health > 0 then
+					if Menu.items_profaneusebelow:Value() == false or ((hero.health / hero.maxHealth) < 0.5) then
+						local itemSlot = GetItemSlot(myHero, Items.ProfaneHydraID)
+						if  itemSlot > 0 then
+							Control.CastSpell(Items.ItemHotKey[itemSlot])
+							NextTick = Game.Timer() + 0.25
+							return
+						end
+					end	
+				end
+		end
+		
+	end
+	
+	
+	
 	Callback.Add('Tick', ZhonyaTimers.Tick)
 	Callback.Add('Draw', ZhonyaTimers.Draw)
 	Callback.Add('Tick', Potter.Tick)
+	Callback.Add('Tick', Items.Tick)
 	
 	print("SussyUtils loaded.")
 end
