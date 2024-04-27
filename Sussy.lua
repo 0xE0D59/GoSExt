@@ -4,6 +4,7 @@
 	version 1.18
 	
 	Changelog:
+	-- 1.19: Added Blitzcrank
 	-- 1.18: Added Kennen
 	-- 1.17: Added Rumble
 	-- 1.16: Added Darius, Garen R KS
@@ -24,7 +25,7 @@
 	-- 1.1:	Added Shaco
 	-- 1.0:	Initial release
 ]] --
-local Version = "1.18"
+local Version = "1.19"
 local LoadTime = 0
 require("GGPrediction")
 require("DamageLib")
@@ -261,10 +262,10 @@ do
         end
         return false
     end
-	
-	function Orb:IsImmortal(target, isAttack)
-		return _G.SDK.ObjectManager:IsHeroImmortal(target, isAttack)
-	end
+
+    function Orb:IsImmortal(target, isAttack)
+        return _G.SDK.ObjectManager:IsHeroImmortal(target, isAttack)
+    end
 
     function Orb:OnPostAttack(fn)
         if _G.SDK then
@@ -451,7 +452,7 @@ do
                 Menu.r:MenuElement({id = "dist", name = "Min distance", value = 400, min = 0, max = 800, step = 25})
 
             local QStartTime = 0
-			local NextQStart = Game.Timer()
+            local NextQStart = Game.Timer()
 
             Callback.Add(
                 "Tick",
@@ -481,7 +482,7 @@ do
                                 end
                             end
                         end
-                        if mode == "Combo" and Menu.r_combo:Value() and not myHero.activeSpell.valid then
+                        if Orb:IsCombo() and Menu.r_combo:Value() and not myHero.activeSpell.valid then
                             local target = Orb:GetTarget(800)
                             if target and myHero.pos:DistanceTo(target.pos) >= Menu.r_dist:Value() then
                                 Control.CastSpell(HK_R, target)
@@ -490,7 +491,10 @@ do
                         end
                     end
 
-                    if (Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()) or Menu.q_auto:Value() then
+                    if
+                        (Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()) or
+                            Menu.q_auto:Value()
+                     then
                         local target = Orb:GetTarget(1500)
                         if target == nil then
                             return
@@ -529,17 +533,20 @@ do
                                     Control.CastSpell(HK_Q, target.pos)
                                 end
                             end
-                        elseif (Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()) and 
-						Spells:IsReady(_Q) and myHero.pos:DistanceTo(target.pos) <= 850 then
-							if NextQStart > Game.Timer() then
-								return
-							end
-							if Control.IsKeyDown(HK_Q) then
-								Control.KeyUp(HK_Q)
-							else
-								Control.KeyDown(HK_Q)
-							end
-							NextQStart = Game.Timer() + 0.25
+                        elseif
+                            (Orb:IsCombo() and Menu.q_combo:Value()) or
+                                (Orb:IsHarass() and Menu.q_harass:Value()) and Spells:IsReady(_Q) and
+                                    myHero.pos:DistanceTo(target.pos) <= 850
+                         then
+                            if NextQStart > Game.Timer() then
+                                return
+                            end
+                            if Control.IsKeyDown(HK_Q) then
+                                Control.KeyUp(HK_Q)
+                            else
+                                Control.KeyDown(HK_Q)
+                            end
+                            NextQStart = Game.Timer() + 0.25
                         end
                     end
                 end
@@ -684,7 +691,7 @@ do
                     end
 
                     local mode = Orb:GetMode()
-                    if not ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value())) then
+                    if not ((Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value())) then
                         return
                     end
                     local target = Orb:GetTarget(QRange)
@@ -732,7 +739,7 @@ do
                     end
                     local mode = Orb:GetMode()
 
-                    if Spells:IsReady(_R) and Menu.r_combo:Value() and mode == "Combo" then
+                    if Spells:IsReady(_R) and Menu.r_combo:Value() and Orb:IsCombo() then
                         for i = 1, Game.HeroCount() do
                             local hero = Game.Hero(i)
                             if
@@ -764,7 +771,7 @@ do
                     )
                     if
                         Spells:IsReady(_Q) and target and
-                            ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()))
+                            ((Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()))
                      then
                         QGGPrediction:GetPrediction(target, myHero)
                         if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
@@ -1038,7 +1045,7 @@ do
                     local mode = Orb:GetMode()
 
                     if Spells:IsReady(_R) then
-                        if ((mode == "Combo" and Menu.r_combo:Value()) or Menu.r_auto:Value()) then
+                        if ((Orb:IsCombo() and Menu.r_combo:Value()) or Menu.r_auto:Value()) then
                             local count = 0
                             for i = 1, Game.HeroCount() do
                                 local hero = Game.Hero(i)
@@ -1050,7 +1057,7 @@ do
                                 end
                             end
                             local minTargets = Menu.r_auto_targets:Value()
-                            if mode == "Combo" and Menu.r_combo:Value() then
+                            if Orb:IsCombo() and Menu.r_combo:Value() then
                                 minTargets = Menu.r_combo_targets:Value()
                             end
                             if count >= minTargets then
@@ -1081,7 +1088,7 @@ do
                                 end
                             end
                         end
-                        if (mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()) then
+                        if (Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()) then
                             QGGPrediction.Range = Menu.q_range:Value()
                             local target = Orb:GetTarget(QGGPrediction.Range)
                             if target then
@@ -1095,7 +1102,7 @@ do
                     end
 
                     if Spells:IsReady(_E) then
-                        if (mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value()) then
+                        if (Orb:IsCombo() and Menu.e_combo:Value()) or (Orb:IsHarass() and Menu.e_harass:Value()) then
                             local target = Orb:GetTarget(300)
                             if target then
                                 Control.CastSpell(HK_E)
@@ -1203,7 +1210,7 @@ do
                                 end
                             end
                         end
-                        if (mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()) then
+                        if (Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()) then
                             QGGPrediction.Range = Menu.q_range:Value()
                             local target = Orb:GetTarget(QGGPrediction.Range)
                             if target then
@@ -1232,7 +1239,7 @@ do
                     local mode = Orb:GetMode()
                     if
                         Spells:IsReady(_E) and
-                            ((mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.e_harass:Value()))
+                            ((Orb:IsCombo() and Menu.e_combo:Value()) or (Orb:IsHarass() and Menu.e_harass:Value()))
                      then
                         local target = Orb:GetTarget(300)
                         if target then
@@ -1312,7 +1319,7 @@ do
                                 end
                             end
                         end
-                        if (mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()) then
+                        if (Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()) then
                             QGGPrediction.Range = Menu.q_range:Value()
                             local target = Orb:GetTarget(QGGPrediction.Range)
                             if target then
@@ -1507,8 +1514,8 @@ do
                     if target then
                         if
                             Spells:IsReady(_Q) and
-                                ((mode == "Combo" and Menu.q_combo:Value()) or
-                                    (mode == "Harass" and Menu.q_harass:Value())) and
+                                ((Orb:IsCombo() and Menu.q_combo:Value()) or
+                                    (Orb:IsHarass() and Menu.q_harass:Value())) and
                                 Game.Timer() > NextQCast
                          then
                             if target and Champion:IsValidEnemy(target) then
@@ -1523,8 +1530,8 @@ do
 
                         if
                             target and Spells:IsReady(_E) and
-                                ((mode == "Combo" and Menu.e_combo:Value()) or
-                                    (mode == "Harass" and Menu.e_harass:Value()))
+                                ((Orb:IsCombo() and Menu.e_combo:Value()) or
+                                    (Orb:IsHarass() and Menu.e_harass:Value()))
                          then
                             if target and Champion:IsValidEnemy(target) then
                                 EGGPrediction:GetPrediction(target, myHero)
@@ -1702,7 +1709,7 @@ do
                             local hero = validEnemies[i]
                             if
                                 hero.ms >= 300 and myHero.pos:DistanceTo(hero.pos) <= ERange and
-                                    Menu.e_targets["ZileanE_" .. hero.charName]:Value() 
+                                    Menu.e_targets["ZileanE_" .. hero.charName]:Value()
                              then
                                 Control.CastSpell(HK_E, hero)
                                 NextECast = Game.Timer() + 0.25
@@ -1764,8 +1771,8 @@ do
                         local target = Orb:GetTarget(1200)
                         if
                             target and
-                                ((mode == "Combo" and Menu.q_combo:Value()) or
-                                    (mode == "Harass" and Menu.q_harass:Value())) and
+                                ((Orb:IsCombo() and Menu.q_combo:Value()) or
+                                    (Orb:IsHarass() and Menu.q_harass:Value())) and
                                 Champion:IsValidEnemy(target)
                          then
                             QGGPrediction:GetPrediction(target, myHero)
@@ -1803,8 +1810,8 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Renata END
-		
-		-- Trundle START
+
+        -- Trundle START
         if myHero.charName == "Trundle" then
             Menu:Init()
             Menu.w:Remove()
@@ -1825,7 +1832,7 @@ do
                     local mode = Orb:GetMode()
                     if
                         Spells:IsReady(_Q) and
-                            ((mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()))
+                            ((Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()))
                      then
                         local target = Orb:GetTarget(325)
                         if target then
@@ -1838,8 +1845,8 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Trundle END
-		
-		-- Garen START
+
+        -- Garen START
         if myHero.charName == "Garen" then
             Menu:Init()
             Menu.w:Remove()
@@ -1847,48 +1854,58 @@ do
 
             Menu.q_combo = Menu.q:MenuElement({id = "combo", name = "Combo", value = true})
             Menu.q_harass = Menu.q:MenuElement({id = "harass", name = "Harass", value = false})
-			Menu.r_killsteal = Menu.r:MenuElement({id = "killsteal", name = "Killsteal", value = true})			
-			local targetsLoaded = false
+            Menu.r_killsteal = Menu.r:MenuElement({id = "killsteal", name = "Killsteal", value = true})
+            local targetsLoaded = false
             DelayAction(
                 function()
-					Menu.r_targets = Menu.r:MenuElement({id = "garenrtargets", name = "Use on: ", type = MENU})
+                    Menu.r_targets = Menu.r:MenuElement({id = "garenrtargets", name = "Use on: ", type = MENU})
                     for i, target in pairs(Champion:GetEnemies()) do
                         Menu.r_targets:MenuElement(
                             {id = "GarenR_" .. target.charName, name = target.charName, value = true}
                         )
                     end
-					targetsLoaded = true
+                    targetsLoaded = true
                 end,
                 1
             )
-			Menu.r_rangedraw = Menu.d:MenuElement({id = "rrangedraw", name = "R Range", value = false})
-			
+            Menu.r_rangedraw = Menu.d:MenuElement({id = "rrangedraw", name = "R Range", value = false})
+
             local NextRTime = 0.0
 
             Callback.Add(
                 "Tick",
                 function()
-					if targetsLoaded and Menu.r_killsteal:Value() and Spells:IsReady(_R) and Game.Timer() > NextRTime then
-						local count = 0
-						for i = 1, Game.HeroCount() do
-							local hero = Game.Hero(i)
-							if
-								hero and hero.team ~= myHero.team and Menu.r_targets["GarenR_" .. hero.charName]:Value() and hero.valid and hero.alive and
-									myHero.pos:DistanceTo(hero.pos) <= 425
-							 then
-								local rlevel = myHero:GetSpellData(_R).level
-								local rdamage = ({150, 300, 450})[rlevel] + (({25, 30, 35})[rlevel] / 100) * (hero.maxHealth - hero.health)
-								if rdamage > hero.health + (2 * hero.hpRegen) and not Orb:IsImmortal(hero, false) then
-									print("Casting R on "..hero.name.." - health: "..string.format("%.0f", hero.health).." damage: "..string.format("%.0f", rdamage))
-									Control.CastSpell(HK_R, hero)
-									NextRTime = Game.Timer() + 0.5
-									return
-								end
-							end
-						end
-					end
-				end
-				)
+                    if targetsLoaded and Menu.r_killsteal:Value() and Spells:IsReady(_R) and Game.Timer() > NextRTime then
+                        local count = 0
+                        for i = 1, Game.HeroCount() do
+                            local hero = Game.Hero(i)
+                            if
+                                hero and hero.team ~= myHero.team and Menu.r_targets["GarenR_" .. hero.charName]:Value() and
+                                    hero.valid and
+                                    hero.alive and
+                                    myHero.pos:DistanceTo(hero.pos) <= 425
+                             then
+                                local rlevel = myHero:GetSpellData(_R).level
+                                local rdamage =
+                                    ({150, 300, 450})[rlevel] +
+                                    (({25, 30, 35})[rlevel] / 100) * (hero.maxHealth - hero.health)
+                                if rdamage > hero.health + (2 * hero.hpRegen) and not Orb:IsImmortal(hero, false) then
+                                    print(
+                                        "Casting R on " ..
+                                            hero.name ..
+                                                " - health: " ..
+                                                    string.format("%.0f", hero.health) ..
+                                                        " damage: " .. string.format("%.0f", rdamage)
+                                    )
+                                    Control.CastSpell(HK_R, hero)
+                                    NextRTime = Game.Timer() + 0.5
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end
+            )
             Orb:OnPostAttack(
                 function()
                     if
@@ -1902,8 +1919,8 @@ do
                     end
                 end
             )
-			
-			Callback.Add(
+
+            Callback.Add(
                 "Draw",
                 function()
                     local RRange = 400
@@ -1916,8 +1933,8 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Garen END
-		
-		-- Teemo START
+
+        -- Teemo START
         if myHero.charName == "Teemo" then
             Menu:Init()
             Menu.w:Remove()
@@ -1951,8 +1968,8 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Teemo END
-		
-		-- Rammus START
+
+        -- Rammus START
         if myHero.charName == "Rammus" then
             Menu:Init()
             Menu.q:Remove()
@@ -1962,14 +1979,14 @@ do
 
             Menu.w_combo = Menu.w:MenuElement({id = "combo", name = "Combo", value = true})
             Menu.w_harass = Menu.w:MenuElement({id = "harass", name = "Harass", value = false})
-			
+
             Menu.e_combo = Menu.e:MenuElement({id = "combo", name = "Combo", value = true})
             Menu.e_harass = Menu.e:MenuElement({id = "harass", name = "Harass", value = false})
 
             Callback.Add(
                 "Tick",
                 function()
-					local mode = Orb:GetMode()
+                    local mode = Orb:GetMode()
                     if
                         Spells:IsReady(_E) and
                             ((Menu.e_combo:Value() and Orb:IsCombo()) or (Menu.e_harass:Value() and Orb:IsHarass()))
@@ -1986,8 +2003,8 @@ do
                     local mode = Orb:GetMode()
                     if
                         Spells:IsReady(_W) and
-                            ((Menu.w_combo:Value() and Orb:IsCombo()) or (Menu.w_harass:Value() and Orb:IsHarass()))
-							 and myHero:GetSpellData(_W).name == "DefensiveBallCurl"
+                            ((Menu.w_combo:Value() and Orb:IsCombo()) or (Menu.w_harass:Value() and Orb:IsHarass())) and
+                            myHero:GetSpellData(_W).name == "DefensiveBallCurl"
                      then
                         local target = Orb:GetTarget(250)
                         if target then
@@ -2000,8 +2017,8 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Rammus END
-		
-		-- Jax START
+
+        -- Jax START
         if myHero.charName == "Jax" then
             Menu:Init()
             Menu.q:Remove()
@@ -2013,14 +2030,12 @@ do
             Menu.w_combo = Menu.w:MenuElement({id = "combo", name = "Combo", value = true})
             Menu.w_harass = Menu.w:MenuElement({id = "harass", name = "Harass", value = false})
 
-            
             Orb:OnPostAttack(
                 function()
                     local mode = Orb:GetMode()
                     if
                         Spells:IsReady(_W) and
                             ((Menu.w_combo:Value() and Orb:IsCombo()) or (Menu.w_harass:Value() and Orb:IsHarass()))
-							 
                      then
                         local target = Orb:GetTarget(300)
                         if target then
@@ -2033,8 +2048,8 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Jax END
-		
-		-- Zac START
+
+        -- Zac START
         if myHero.charName == "Zac" then
             Menu:Init()
 
@@ -2047,47 +2062,52 @@ do
                 Menu.q:MenuElement(
                 {id = "hitchance", name = "Hitchance", value = 2, drop = {"Normal", "High", "Immobile"}}
             )
-			
-			Menu.w_combo = Menu.w:MenuElement({id = 'combo', name = 'Combo', value = true})			
-			Menu.w_harass = Menu.w:MenuElement({id = 'harass', name = 'Harass', value = true})			
-			Menu.w_waveclear = Menu.w:MenuElement({id = 'clear', name = 'Clear', value = true})
-			Menu.w_jungle = Menu.w:MenuElement({id = 'clear', name = 'Jungle', value = true})
-			Menu.e:Remove()
-			
-			Menu.r_combo = Menu.r:MenuElement({id = "combo", name = "Combo", value = true})
+
+            Menu.w_combo = Menu.w:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.w_harass = Menu.w:MenuElement({id = "harass", name = "Harass", value = true})
+            Menu.w_waveclear = Menu.w:MenuElement({id = "clear", name = "Clear", value = true})
+            Menu.w_jungle = Menu.w:MenuElement({id = "clear", name = "Jungle", value = true})
+            Menu.e:Remove()
+
+            Menu.r_combo = Menu.r:MenuElement({id = "combo", name = "Combo", value = true})
             Menu.r_combo_targets =
                 Menu.r:MenuElement(
                 {id = "combotargets", name = "Combo Min Targets", value = 2, min = 1, max = 5, step = 1}
             )
             Menu.r_comborange =
-                Menu.r:MenuElement({id = "rcomborange", name = "R Combo Range", value = 325, min = 25, max = 450, step = 25})
+                Menu.r:MenuElement(
+                {id = "rcomborange", name = "R Combo Range", value = 325, min = 25, max = 450, step = 25}
+            )
             Menu.r_auto = Menu.r:MenuElement({id = "auto", name = "Auto", value = true})
             Menu.r_auto_targets =
                 Menu.r:MenuElement(
-                {id = "Auto min targets", name = "Auto Min Targets", value = 3, min = 1, max = 5, step = 1})				
+                {id = "Auto min targets", name = "Auto Min Targets", value = 3, min = 1, max = 5, step = 1}
+            )
             Menu.r_autorange =
-                Menu.r:MenuElement({id = "rautorange", name = "R Auto Range", value = 325, min = 25, max = 450, step = 25})
-            
-			
+                Menu.r:MenuElement(
+                {id = "rautorange", name = "R Auto Range", value = 325, min = 25, max = 450, step = 25}
+            )
+
             Menu.q_rangedraw = Menu.d:MenuElement({id = "qrangedraw", name = "Q Range", value = true})
             Menu.w_rangedraw = Menu.d:MenuElement({id = "wrangedraw", name = "W Range", value = false})
             Menu.e_rangedraw = Menu.d:MenuElement({id = "erangedraw", name = "E Range", value = true})
             Menu.r_rangedraw = Menu.d:MenuElement({id = "rrangedraw", name = "R Range", value = false})
-		
-			local QGGPrediction =
-							GGPrediction:SpellPrediction(
-							{
-								Delay = 0.25,
-								Radius = 80,
-								Range = 950,
-								Speed = 2800,
-								Type = GGPrediction.SPELLTYPE_LINE,
-								Collision = true,
-								MaxCollision = 0,
-								CollisionTypes = {GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL}
-							})
-			local ERanges = { 1200, 1350, 1500, 1650, 1800}
-			
+
+            local QGGPrediction =
+                GGPrediction:SpellPrediction(
+                {
+                    Delay = 0.25,
+                    Radius = 80,
+                    Range = 950,
+                    Speed = 2800,
+                    Type = GGPrediction.SPELLTYPE_LINE,
+                    Collision = true,
+                    MaxCollision = 0,
+                    CollisionTypes = {GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL}
+                }
+            )
+            local ERanges = {1200, 1350, 1500, 1650, 1800}
+
             Callback.Add(
                 "Tick",
                 function()
@@ -2095,15 +2115,15 @@ do
                         return
                     end
                     local mode = Orb:GetMode()
-					
-					if Spells:IsReady(_R) then
-                        if ((mode == "Combo" and Menu.r_combo:Value()) or Menu.r_auto:Value()) then
+
+                    if Spells:IsReady(_R) then
+                        if ((Orb:IsCombo() and Menu.r_combo:Value()) or Menu.r_auto:Value()) then
                             local count = 0
-							local range = Menu.r_comborange:Value()
+                            local range = Menu.r_comborange:Value()
                             local minTargets = Menu.r_auto_targets:Value()
-                            if mode == "Combo" and Menu.r_combo:Value() then
+                            if Orb:IsCombo() and Menu.r_combo:Value() then
                                 minTargets = Menu.r_combo_targets:Value()
-								range = Menu.r_autorange:Value()
+                                range = Menu.r_autorange:Value()
                             end
                             for i = 1, Game.HeroCount() do
                                 local hero = Game.Hero(i)
@@ -2120,9 +2140,9 @@ do
                             end
                         end
                     end
-					
-					if Spells:IsReady(_W) then
-                        if (mode == "Combo" and Menu.w_combo:Value()) or (mode == "Harass" and Menu.w_harass:Value()) then
+
+                    if Spells:IsReady(_W) then
+                        if (Orb:IsCombo() and Menu.w_combo:Value()) or (Orb:IsHarass() and Menu.w_harass:Value()) then
                             local target = Orb:GetTarget(350)
                             if target then
                                 Control.CastSpell(HK_W)
@@ -2168,7 +2188,7 @@ do
                                 end
                             end
                         end
-                        if (mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()) then
+                        if (Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()) then
                             QGGPrediction.Range = Menu.q_range:Value()
                             local target = Orb:GetTarget(QGGPrediction.Range + 50)
                             if target then
@@ -2180,23 +2200,20 @@ do
                             end
                         end
                     end
-
-                    
                 end
             )
-			
-			Callback.Add(
+
+            Callback.Add(
                 "Draw",
                 function()
                     if Menu.q_rangedraw:Value() and Spells:IsReady(_Q) then
                         Draw.Circle(myHero.pos, Menu.q_range:Value(), Draw.Color(200, 255, 0, 0))
                     end
-					if Menu.w_rangedraw:Value() and Spells:IsReady(_W) then
+                    if Menu.w_rangedraw:Value() and Spells:IsReady(_W) then
                         Draw.Circle(myHero.pos, 350, Draw.Color(200, 0, 255, 0))
                     end
-					if Menu.e_rangedraw:Value() and Spells:IsReady(_E) then
-						
-						local erange = ERanges[myHero:GetSpellData(_E).level]
+                    if Menu.e_rangedraw:Value() and Spells:IsReady(_E) then
+                        local erange = ERanges[myHero:GetSpellData(_E).level]
                         Draw.Circle(myHero.pos, erange, Draw.Color(200, 0, 0, 255))
                     end
                     if Menu.r_rangedraw:Value() and Spells:IsReady(_R) then
@@ -2208,8 +2225,8 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Zac END
-		
-		-- Darius START
+
+        -- Darius START
         if myHero.charName == "Darius" then
             Menu:Init()
             Menu.q:Remove()
@@ -2218,65 +2235,79 @@ do
             Menu.w_harass = Menu.w:MenuElement({id = "harass", name = "Harass", value = false})
             Menu.e_combo = Menu.e:MenuElement({id = "ecombo", name = "Combo", value = true})
             Menu.e_harass = Menu.e:MenuElement({id = "eharass", name = "Harass", value = false})
-			Menu.r_killsteal = Menu.r:MenuElement({id = "killsteal", name = "Killsteal", value = true})
-			local targetsLoaded = false
+            Menu.r_killsteal = Menu.r:MenuElement({id = "killsteal", name = "Killsteal", value = true})
+            local targetsLoaded = false
             DelayAction(
                 function()
-					Menu.r_targets = Menu.r:MenuElement({id = "dariusrtargets", name = "Use on: ", type = MENU})
+                    Menu.r_targets = Menu.r:MenuElement({id = "dariusrtargets", name = "Use on: ", type = MENU})
                     for i, target in pairs(Champion:GetEnemies()) do
                         Menu.r_targets:MenuElement(
                             {id = "DariusR_" .. target.charName, name = target.charName, value = true}
                         )
                     end
-					targetsLoaded = true
+                    targetsLoaded = true
                 end,
                 1
             )
-			Menu.e_rangedraw = Menu.d:MenuElement({id = "erangedraw", name = "E Range", value = false})
-			Menu.r_rangedraw = Menu.d:MenuElement({id = "rrangedraw", name = "R Range", value = false})
-			
+            Menu.e_rangedraw = Menu.d:MenuElement({id = "erangedraw", name = "E Range", value = false})
+            Menu.r_rangedraw = Menu.d:MenuElement({id = "rrangedraw", name = "R Range", value = false})
+
             local NextRTime = 0.0
 
             Callback.Add(
                 "Tick",
                 function()
-					if targetsLoaded and Menu.r_killsteal:Value() and Spells:IsReady(_R) and Game.Timer() > NextRTime then
-						local count = 0
-						for i = 1, Game.HeroCount() do
-							local hero = Game.Hero(i)
-							if
-								hero and hero.team ~= myHero.team and Menu.r_targets["DariusR_" .. hero.charName]:Value() and hero.valid and hero.alive and
-									myHero.pos:DistanceTo(hero.pos) <= 500
-							 then
-								local rlevel = myHero:GetSpellData(_R).level
-								local rstacks = 0
-								local bleedbuff = _G.SDK.BuffManager:GetBuff(hero, "DariusHemo")
-								if bleedbuff and bleedbuff.count > 0 and bleedbuff.duration > 0 then
-									rstacks = bleedbuff.count
-								end
-								local rdamage = (({125, 250, 375})[rlevel] + myHero.bonusDamage * 0.75) * (1 + 0.2 * rstacks)
-								if rdamage > hero.health and not Orb:IsImmortal(hero, false) then
-									print("Casting R on "..hero.name.." - health: "..string.format("%.0f", hero.health).." damage: "..string.format("%.0f", rdamage).." stacks: "..rstacks)
-									Control.CastSpell(HK_R, hero)
-									NextRTime = Game.Timer() + 0.5
-									return
-								end
-							end
-						end
-					end
-					
-					if Spells:IsReady(_E) and ((Orb:IsCombo() and Menu.e_combo:Value()) or (Orb:IsHarass() and Menu.e_harass:Value())) then
+                    if targetsLoaded and Game.Timer() > NextRTime and Menu.r_killsteal:Value() and Spells:IsReady(_R) then
+                        local count = 0
+                        for i = 1, Game.HeroCount() do
+                            local hero = Game.Hero(i)
+                            if
+                                hero and hero.team ~= myHero.team and
+                                    Menu.r_targets["DariusR_" .. hero.charName]:Value() and
+                                    hero.valid and
+                                    hero.alive and
+                                    myHero.pos:DistanceTo(hero.pos) <= 500
+                             then
+                                local rlevel = myHero:GetSpellData(_R).level
+                                local rstacks = 0
+                                local bleedbuff = _G.SDK.BuffManager:GetBuff(hero, "DariusHemo")
+                                if bleedbuff and bleedbuff.count > 0 and bleedbuff.duration > 0 then
+                                    rstacks = bleedbuff.count
+                                end
+                                local rdamage =
+                                    (({125, 250, 375})[rlevel] + myHero.bonusDamage * 0.75) * (1 + 0.2 * rstacks)
+                                if rdamage > hero.health and not Orb:IsImmortal(hero, false) then
+                                    print(
+                                        "Casting R on " ..
+                                            hero.name ..
+                                                " - health: " ..
+                                                    string.format("%.0f", hero.health) ..
+                                                        " damage: " ..
+                                                            string.format("%.0f", rdamage) .. " stacks: " .. rstacks
+                                    )
+                                    Control.CastSpell(HK_R, hero)
+                                    NextRTime = Game.Timer() + 0.5
+                                    return
+                                end
+                            end
+                        end
+                    end
+
+                    if
+                        Spells:IsReady(_E) and
+                            ((Orb:IsCombo() and Menu.e_combo:Value()) or (Orb:IsHarass() and Menu.e_harass:Value()))
+                     then
                         local target = Orb:GetTarget(535)
-						if target then
-							local distanceToTarget = myHero.pos:DistanceTo(target.pos)
-							if distanceToTarget <= 535 and distanceToTarget >= 325 then
-								Control.CastSpell(HK_E, target)
-								return
-							end							
-						end
-					end
-				end
-				)
+                        if target then
+                            local distanceToTarget = myHero.pos:DistanceTo(target.pos)
+                            if distanceToTarget <= 535 and distanceToTarget >= 325 then
+                                Control.CastSpell(HK_E, target)
+                                return
+                            end
+                        end
+                    end
+                end
+            )
             Orb:OnPostAttack(
                 function()
                     if
@@ -2290,8 +2321,8 @@ do
                     end
                 end
             )
-			
-			Callback.Add(
+
+            Callback.Add(
                 "Draw",
                 function()
                     local ERange = 475
@@ -2308,8 +2339,8 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Darius END
-		
-		-- Rumble START
+
+        -- Rumble START
         if myHero.charName == "Rumble" then
             Menu:Init()
 
@@ -2322,7 +2353,7 @@ do
                 Menu.e:MenuElement(
                 {id = "hitchance", name = "Hitchance", value = 1, drop = {"Normal", "High", "Immobile"}}
             )
-			
+
             Menu.q:Remove()
             Menu.w:Remove()
             Menu.r:Remove()
@@ -2372,7 +2403,7 @@ do
                                 end
                             end
                         end
-                        if (mode == "Combo" and Menu.e_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()) then
+                        if (Orb:IsCombo() and Menu.e_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()) then
                             EGGPrediction.Range = Menu.e_range:Value()
                             local target = Orb:GetTarget(EGGPrediction.Range)
                             if target then
@@ -2399,8 +2430,8 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Rumble END
-		
-		-- Kennen START
+
+        -- Kennen START
         if myHero.charName == "Kennen" then
             Menu:Init()
 
@@ -2413,7 +2444,7 @@ do
                 Menu.q:MenuElement(
                 {id = "hitchance", name = "Hitchance", value = 1, drop = {"Normal", "High", "Immobile"}}
             )
-			
+
             Menu.w:Remove()
             Menu.e:Remove()
             Menu.r:Remove()
@@ -2463,7 +2494,7 @@ do
                                 end
                             end
                         end
-                        if (mode == "Combo" and Menu.q_combo:Value()) or (mode == "Harass" and Menu.q_harass:Value()) then
+                        if (Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()) then
                             QGGPrediction.Range = Menu.q_range:Value()
                             local target = Orb:GetTarget(QGGPrediction.Range)
                             if target then
@@ -2490,5 +2521,116 @@ do
             print("Sussy " .. myHero.charName .. " loaded.")
         end
         -- Rumble END
+
+        -- Blitzcrank START
+        if myHero.charName == "Blitzcrank" then
+            Menu:Init()
+
+            Menu.q_combo = Menu.q:MenuElement({id = "combo", name = "Combo", value = true})
+            Menu.q_harass = Menu.q:MenuElement({id = "harass", name = "Harass", value = false})
+            Menu.q_killsteal = Menu.q:MenuElement({id = "combo", name = "Killsteal", value = true})
+            Menu.q_range =
+                Menu.q:MenuElement({id = "qrange", name = "Q Range", value = 1000, min = 25, max = 1100, step = 25})
+            Menu.q_hitchance =
+                Menu.q:MenuElement(
+                {id = "hitchance", name = "Hitchance", value = 1, drop = {"Normal", "High", "Immobile"}}
+            )
+            Menu.w:Remove()
+            Menu.e_combo = Menu.e:MenuElement({id = "ecombo", name = "Combo", value = true})
+            Menu.e_harass = Menu.e:MenuElement({id = "eharass", name = "Harass", value = false})
+            Menu.r:Remove()
+
+            Menu.q_rangedraw = Menu.d:MenuElement({id = "qrangedraw", name = "Q Range", value = true})
+
+            local QGGPrediction =
+                GGPrediction:SpellPrediction(
+                {
+                    Delay = 0.25,
+                    Radius = 70,
+                    Range = 1100,
+                    Speed = 1800,
+                    Type = GGPrediction.SPELLTYPE_LINE,
+                    Collision = true,
+                    MaxCollision = 0,
+                    CollisionTypes = {GGPrediction.COLLISION_MINION, GGPrediction.COLLISION_YASUOWALL}
+                }
+            )
+
+            local NextQCast = 0
+            local NextECast = 0
+
+            Callback.Add(
+                "Tick",
+                function()
+                    if Champion:MyHeroNotReady() then
+                        return
+                    end
+                    local mode = Orb:GetMode()
+
+                    if Game.Timer() > NextQCast and Spells:IsReady(_Q) then
+                        if Menu.q_killsteal:Value() then
+                            local count = 0
+                            for i = 1, Game.HeroCount() do
+                                local hero = Game.Hero(i)
+                                if
+                                    hero and hero.team ~= myHero.team and hero.valid and hero.alive and
+                                        myHero.pos:DistanceTo(hero.pos) <= 1050
+                                 then
+                                    local qdamage = getdmg("Q", hero, myHero)
+                                    if qdamage > hero.health + (2 * hero.hpRegen) then
+                                        QGGPrediction.Range = 1050
+                                        QGGPrediction:GetPrediction(hero, myHero)
+                                        if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+                                            Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                            NextQCast = Game.Timer() + 1.0
+                                            return
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                        if (Orb:IsCombo() and Menu.q_combo:Value()) or (Orb:IsHarass() and Menu.q_harass:Value()) then
+                            QGGPrediction.Range = Menu.q_range:Value()
+                            local target = Orb:GetTarget(QGGPrediction.Range)
+                            if target then
+                                QGGPrediction:GetPrediction(target, myHero)
+                                if QGGPrediction:CanHit(Menu.q_hitchance:Value() + 1) then
+                                    Control.CastSpell(HK_Q, QGGPrediction.CastPosition)
+                                    NextQCast = Game.Timer() + 1.0
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end
+            )
+
+            Orb:OnPreAttack(
+                function()
+                    if
+                        Game.Timer() > NextECast and Spells:IsReady(_E) and
+                            ((Orb:IsCombo() and Menu.e_combo:Value()) or (Orb:IsHarass() and Menu.e_harass:Value()))
+                     then
+                        local target = Orb:GetTarget(325)
+                        if target then
+                            Control.CastSpell(HK_E)
+                            NextEast = Game.Timer() + 1.0
+                        end
+                    end
+                end
+            )
+
+            Callback.Add(
+                "Draw",
+                function()
+                    if Menu.q_rangedraw:Value() and Spells:IsReady(_Q) then
+                        Draw.Circle(myHero.pos, Menu.q_range:Value(), Draw.Color(255, 255, 255, 100))
+                    end
+                end
+            )
+
+            print("Sussy " .. myHero.charName .. " loaded.")
+        end
+        -- Blitzcrank END
     end
 end
